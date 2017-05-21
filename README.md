@@ -66,7 +66,8 @@ The repository contains the EasyCrypt proof scripts (files with
 extensions `.ec` (ordinary theories) and `.eca` (abstract theories))
 proving the security of PCR.
 
-There is also a shell script `check-all-scripts` for checking all
+There is also a shell script
+[`check-all-scripts`](../master/check-all-scripts) for checking all
 theories using two SMT provers: Alt-Ergo and Z3.
 
 EasyCrypt Theories
@@ -76,45 +77,47 @@ Auxiliary Theories:
 
  * [`DistrAux.ec` - auxiliary lemmas on distributions](../master/DistrAux.ec)
 
- * `FMapAux.ec` - auxiliary lemmas on finite maps
+ * [`FMapAux.ec` - auxiliary lemmas on finite maps](../master/FMapAux.ec)
 
- * `FSetAux.ec` - auxiliary lemmas on finite sets
+ * [`FSetAux.ec` - auxiliary lemmas on finite sets](../master/FSetAux.ec)
 
- * `ListAux.ec` - auxiliary lemmas on lists
+ * [`ListAux.ec` - auxiliary lemmas on lists](../master/ListAux.ec)
 
 Supporting Theories:
 
- * `Shuffle.eca` - random shuffling of lists
+ * [`Shuffle.eca` - random shuffling of lists](../master/Shuffle.eca)
 
- * `RandomOracle.eca` - random oracles
+ * [`RandomOracle.eca` - random oracles](../master/RandomOracle.eca)
 
- * `SecretGuessing.eca` - secret guessing game
+ * [`SecretGuessing.eca` - secret guessing game](../master/SecretGuessing.eca)
 
- * `SecrecyRandomOracle.eca` - secrecy random oracle
+ * [`SecrecyRandomOracle.eca` - secrecy random
+   oracle](../master/SecrecyRandomOracle.eca)
 
- * `Inj.ec` - injective maps
+ * [`Inj.ec` - injective maps](../master/Inj.ec)
 
- * `NumOccs.ec` - operators for counting numbers of occurrences of elements in
-   lists
+ * [`NumOccs.ec` - operators for counting numbers of occurrences of
+   elements in lists](../master/NumOccs.ec)
 
- * `ElemsCounts.ec` - finite maps providing counts for certain elements
+ * [`ElemsCounts.ec` - finite maps providing counts for certain
+   elements](../master/ElemsCounts.ec)
 
 PCR Protocol:
 
- * `Protocol.ec` - PCR Protocol and support for Server, Third Party and Client
-   proofs
+ * [`Protocol.ec` - PCR Protocol and support for Server, Third Party
+   and Client proofs](../master/Protocol.ec)
 
 Proof of Security Against Server:
 
- * `Server.ec`
+ * [`Server.ec`](../master/Server.ec)
 
 Proof of Security Against Third Party:
 
- * `TP.ec`
+ * [`TP.ec`](../master/TP.ec)
 
 Proof of Security Against Client:
 
- * `Client.ec`
+ * [`Client.ec`](../master/Client.ec)
 
 Authors
 --------------------------------------------------------------------
