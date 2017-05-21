@@ -66,7 +66,7 @@ The repository contains the EasyCrypt proof scripts (files with
 extensions `.ec` (ordinary theories) and `.eca` (abstract theories))
 proving the security of PCR.
 
-There is also a shell script `check-all-script` for checking all
+There is also a shell script `check-all-scripts` for checking all
 theories using two SMT provers: Alt-Ergo and Z3.
 
 EasyCrypt Theories
