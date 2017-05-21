@@ -119,7 +119,7 @@ Proof of Security Against Client:
 Authors
 --------------------------------------------------------------------
 
-These proofs were developed by Alley Stoughton
+These proofs were developed by [Alley Stoughton](http://alleystoughton.us)
 (alley.stoughton@icloud.com), based on a collaboration with Mayank
 Varia (mayank@mvaria.com).
 
