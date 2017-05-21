@@ -1,0 +1,868 @@
+(* SecrecyRandomOracle.eca *)
+
+(* Secrecy Random Oracles *)
+
+(* This abstract theory provides:
+
+     * A secrecy random oracle module type with procedures for
+       initialization, limited hashing of element/secret pairs, and
+       unlimited hashing of elements.
+
+     * A "dependent" implementation of this module type in which
+       oracle initialization stores a secret, the limited and
+       unlimited hashing procedures operate on the same map, and
+       unlimited hashing of an element is equivalent to limited
+       hashing of the pair of the element and the secret.
+
+     * An "independent" implementation of this module type in which
+       the limited and unlimited hashing procedures operate on
+       different maps.
+
+     * A pair of games based on these two oracle implementations, and
+       parameterized by an adversary having access to both limited and
+       unlimited hashing procedures.
+
+     * A lemma upper-bounding the absolute value of the difference in
+       the probabilities of these games returning true. *)
+
+(***************************** Standard Theories ******************************)
+
+require import AllCore Distr FSet NewFMap.
+require import StdOrder. import RealOrder.
+
+(**************************** Supporting Theories *****************************)
+
+(* Secret Guessing Game *)
+
+require SecretGuessing.  (* abstract theory *)
+
+(***************************** Theory Parameters ******************************)
+
+type elem.  (* type of elements *)
+
+(* an oracle output is a bitstring of length output_len *)
+
+op output_len : int.  (* length of oracle output *)
+
+axiom output_len_ge0 : 0 <= output_len.
+
+type output.  (* type of oracle outputs *)
+
+op output_default : output.  (* default oracle output *)
+
+(* uniform distribution on oracle outputs *)
+
+op output_distr : output distr.
+
+axiom mu1_output_distr (out : output) :
+  mu1 output_distr out = 1%r / (2 ^ output_len)%r.
+
+axiom output_distr_ll : is_lossless output_distr.
+
+(* a secret is a bitstring of length sec_len *)
+
+op sec_len : int.  (* length of secret *)
+
+axiom sec_len_ge0 : 0 <= sec_len.
+
+type sec.  (* type of secrets *)
+
+op sec_default : sec.  (* default secret *)
+
+(* uniform distribution on secrets *)
+
+op sec_distr : sec distr.
+
+axiom mu1_sec_distr (sec : sec) :
+  mu1 sec_distr sec = 1%r / (2 ^ sec_len)%r.
+
+axiom sec_distr_ll : is_lossless sec_distr.
+
+(* oracle hashing limit *)
+
+op limit : int.
+
+axiom limit_ge0 : 0 <= limit.
+
+(************************** End of Theory Parameters **************************)
+
+(* module type for secrecy random oracle *)
+
+module type SEC_OR = {
+  proc init(sec : sec) : unit  (* initialization *)
+
+  proc lhash(inp : elem * sec) : output  (* limited hashing of element
+                                            plus secret *)
+
+  proc hash(elem : elem) : output  (* unlimited hashing of element *)
+}.
+
+(* dependent version of secrecy random oracle
+
+   lhash and hash use same map -- so calls to these procedures are
+   dependent on each other; hashing an element using hash actually
+   hashes the pair of the element and the stored secret
+
+   when more than limit distinct calls are made to lhash, output_default
+   is returned; calls to hash aren't limited *)
+
+module SecOrDep : SEC_OR = {
+  var mp : (elem * sec, output)fmap  (* oracle map *)
+  var secret : sec                   (* secret *)
+  var inps : (elem * sec)fset        (* seen limited inputs when under limit;
+                                        subset of dom mp *)
+  var ctr : int                      (* ctr = card inps *)
+
+  proc init(sec : sec) : unit = {
+    mp <- map0;
+    secret <- sec;
+    inps <- fset0;
+    ctr <- 0;
+  }
+
+  proc lhash(inp : elem * sec) : output = {
+    var out : output;
+
+    if (mem inps inp) {  (* seen when under limit *)
+      out <- oget mp.[inp];
+    }
+    elif (ctr < limit) {  (* under limit; invariant: ctr <= limit *)
+      inps <- inps `|` fset1 inp;
+      ctr <- ctr + 1;
+      (* actual hashing; could be already in map's domain because of
+         call to hash *)
+      if (mem (dom mp) inp) {
+        out <- oget mp.[inp];
+      }
+      else {
+        out <$ output_distr;
+        mp.[inp] <- out;
+      }
+    }
+    else {  (* over limit *)
+      out <- output_default;
+    }
+    return out;
+  }
+
+  proc hash(elem : elem) : output = {  (* uses secret *)
+    if (! mem (dom mp) (elem, secret)) {
+      mp.[(elem, secret)] <$ output_distr;
+    }
+    return oget mp.[(elem, secret)];
+  }
+}.
+
+(* independent version of secrecy random oracle
+
+   lhash and hash use different maps -- so calls to these procedures are
+   independent on each other
+
+   when more than limit distinct calls are made to lhash, output_default
+   is returned; calls to hash aren't limited *)
+
+module SecOrIndep : SEC_OR = {
+  (* no secret is recorded *)
+  var lhmp : (elem * sec, output)fmap  (* map for limited hashing *)
+  var hmp : (elem, output)fmap         (* map for unlimited hashing *)
+  var inps : (elem * sec)fset          (* seen limited inputs when under limit;
+                                          equal to dom lhmp *)
+  var ctr : int                        (* ctr = card inps *)
+
+  proc init(sec : sec) : unit = {  (* secret is ignored *)
+    lhmp = map0;
+    hmp = map0;
+    inps = fset0;
+    ctr = 0;
+  }
+
+  proc lhash(inp : elem * sec) : output = {  (* uses lhmp *)
+    var out : output;
+
+    if (mem inps inp) {  (* seen when under limit *)
+      out <- oget lhmp.[inp];
+    }
+    elif (ctr < limit) {
+      inps <- inps `|` fset1 inp;
+      ctr <- ctr + 1;
+      out <$ output_distr;
+      lhmp.[inp] <- out;  (* inp not already in dom lhmp *)
+    }
+    else {
+      out <- output_default;
+    }
+    return out;
+  }
+
+  proc hash(elem : elem) : output = {  (* uses hmp *)
+    if (! mem (dom hmp) elem) {
+      hmp.[elem] <$ output_distr;
+    }
+    return oget hmp.[elem];
+  }
+}.
+
+(* module type for secrecy adversaries, parameterized by secrecy
+   oracles
+
+   adversary has access to lhash and hash, but not init *)
+
+module type SEC_ADV(SOr : SEC_OR) = {
+  proc * main() : bool {SOr.lhash SOr.hash}
+}.
+
+(* dependent game -- uses dependent oracle *)
+
+module GDep(SecAdv : SEC_ADV) = {
+  module SA = SecAdv(SecOrDep)
+
+  proc main() : bool = {
+    var b : bool;
+    var sec : sec;
+
+    sec <$ sec_distr;
+    SecOrDep.init(sec);
+    b <- SA.main();
+    return b;
+  }
+}.
+
+(* independent game -- uses independent oracle *)
+
+module GIndep(SecAdv : SEC_ADV) = {
+  module SA = SecAdv(SecOrIndep)
+
+  proc main() : bool = {
+    var b : bool;
+
+    SecOrIndep.init(sec_default);  (* dummy secret used, as ignored *)
+    b <- SA.main();
+    return b;
+  }
+}.
+
+(* see end of section for main lemma, GDep_GIndep *)
+
+section.
+
+declare module SecAdv : SEC_ADV{SecOrDep, SecOrIndep}.
+
+(* assume losslessness of SecAdv *)
+
+axiom SecAdv_ll :
+  forall (SOr <: SEC_OR{SecAdv}),
+  islossless SOr.lhash => islossless SOr.hash =>
+  islossless SecAdv(SOr).main.
+
+(* version of SecOrDep that's instrumented to detect when lhash
+   is called with input whose second component is the secret *)
+
+local module SecOrDepInstr : SEC_OR = {
+  var mp : (elem * sec, output)fmap
+  var secret : sec
+  var inps : (elem * sec)fset
+  var ctr : int
+  var guessed : bool  (* true iff secret has been passed to lhash *)
+
+  proc init(sec : sec) : unit = {
+    mp <- map0;
+    secret <- sec;
+    inps <- fset0;
+    ctr <- 0;
+    guessed <- false;
+  }
+
+  proc lhash(inp : elem * sec) : output = {
+    var out : output;
+
+    if (mem inps inp) {
+      out <- oget mp.[inp];
+    }
+    elif (ctr < limit) {
+      inps <- inps `|` fset1 inp;
+      ctr <- ctr + 1;
+      if (mem (dom mp) inp) {
+        out <- oget mp.[inp];
+      }
+      else {
+        out <$ output_distr;
+        mp.[inp] <- out;
+      }
+      if (snd inp = secret) {  (* addition *)
+        guessed <- true;
+      }
+    }
+    else {
+      out <- output_default;
+    }
+    return out;
+  }
+
+  proc hash(elem : elem) : output = {
+    if (! mem (dom mp) (elem, secret)) {
+      mp.[(elem, secret)] <$ output_distr;
+    }
+    return oget mp.[(elem, secret)];
+  }
+}.
+
+(* version of GDep using SecOrDepInstr not SecOrDep, and where SecAdv
+   is used directly (isn't a parameter) *)
+
+local module GDepInstr = {
+  module SA = SecAdv(SecOrDepInstr)
+
+  proc main() : bool = {
+    var b : bool;
+    var sec : sec;
+
+    sec <$ sec_distr;
+    SecOrDepInstr.init(sec);
+    b <- SA.main();
+    return b;
+  }
+}.
+
+local lemma GDep_GDepInstr_main :
+  equiv[GDep(SecAdv).main ~ GDepInstr.main : true ==> ={res}].
+proof. sim. qed.
+
+local lemma GDep_GDepInstr &m :
+  Pr[GDep(SecAdv).main() @ &m : res] = Pr[GDepInstr.main() @ &m : res].
+proof. by byequiv GDep_GDepInstr_main. qed.
+
+(* version of SecOrIndep that's instrumented to detect when lhash
+   is called with input whose second component is the secret *)
+
+local module SecOrIndepInstr : SEC_OR = {
+  var lhmp : (elem * sec, output)fmap
+  var hmp : (elem, output)fmap
+  var inps : (elem * sec)fset
+  var ctr : int
+  var secret : sec  (* need to retain secret *)
+  var guessed : bool  (* true iff secret has been passed to lhash *)
+
+  proc init(sec : sec) : unit = {
+    lhmp <- map0;
+    hmp <- map0;
+    inps <- fset0;
+    ctr <- 0;
+    secret <- sec;  (* retain secret *)
+    guessed <- false;
+  }
+
+  proc lhash(inp : elem * sec) : output = {
+    var out : output;
+
+    if (mem inps inp) {
+      out <- oget lhmp.[inp];
+    }
+    elif (ctr < limit) {
+      inps <- inps `|` fset1 inp;
+      ctr <- ctr + 1;
+      out <$ output_distr;
+      lhmp.[inp] <- out;
+      if (snd inp = secret) {  (* addition *)
+        guessed <- true;
+      }
+    }
+    else {
+      out <- output_default;
+    }
+    return out;
+  }
+
+  proc hash(elem : elem) : output = {
+    if (! mem (dom hmp) elem) {
+      hmp.[elem] <$ output_distr;
+    }
+    return oget hmp.[elem];
+  }
+}.
+
+(* version of GIndep using SecOrIndepInstr not SecOrIndep, and where
+   SecAdv is used directly (isn't a parameter); we now need to
+   generate secret and pass it to SecOrIndepInstr.init *)
+
+local module GIndepInstr = {
+  module SA = SecAdv(SecOrIndepInstr)
+
+  proc main() : bool = {
+    var b : bool;
+    var sec : sec;
+
+    sec <$ sec_distr;           (* need to choose and *)
+    SecOrIndepInstr.init(sec);  (* retain secret *)
+    b <- SA.main();
+    return b;
+  }
+}.
+
+local lemma GIndepInstr_GIndep_main :
+  equiv[GIndepInstr.main ~ GIndep(SecAdv).main : true ==> ={res}].
+proof.
+proc.
+seq 2 1 : (={lhmp, hmp, ctr, inps}(SecOrIndepInstr, SecOrIndep)).
+inline *; auto; progress; apply sec_distr_ll.
+sim.
+qed.
+
+local lemma GIndepInstr_GIndep &m :
+  Pr[GIndepInstr.main() @ &m : res] =
+  Pr[GIndep(SecAdv).main() @ &m : res].
+proof. by byequiv GIndepInstr_GIndep_main. qed.
+
+(* next, we prove the following lemma by a reduction to the main lemma
+   of the SecretGuessing theory:
+
+local lemma GIndepInstr_Guessed &m :
+  Pr[GIndepInstr.main() @ &m : SecOrIndepInstr.guessed] <=
+  limit%r / (2 ^ sec_len)%r
+*)
+
+(* we locally clone the abstract theory SecretGuessing as the theory
+   SG, fully realizing it *)
+
+local clone SecretGuessing as SG with
+  op sec_len <- sec_len,
+  type sec <- sec,
+  op sec_default <- sec_default,
+  op sec_distr <- sec_distr,
+  op limit <- limit
+proof *.
+(* beginning of realization *)
+realize sec_len_ge0. apply sec_len_ge0. qed.
+
+realize mu1_sec_distr. apply mu1_sec_distr. qed.
+
+realize sec_distr_ll. apply sec_distr_ll. qed.
+
+realize limit_ge0. apply limit_ge0. qed.
+(* end of realization *)
+
+(* module converting a secret guessing oracle to a secrecy random
+   oracle approximating SecOrIndepInstr
+
+   the storage and handling of the secret is now done by
+   the secret guessing oracle *)
+
+local module ConvToSecOrIndepInstr(SGOr : SG.SG_OR) : SEC_OR = {
+  var lhmp : (elem * sec, output)fmap
+  var hmp : (elem, output)fmap
+  var inps : (elem * sec)fset
+  var ctr : int
+
+  proc init(sec : sec) : unit = {  (* secret is ignored *)
+    lhmp <- map0;
+    hmp <- map0;
+    inps <- fset0;
+    ctr <- 0;
+  }
+
+  proc lhash(inp : elem * sec) : output = {
+    var out : output;
+
+    if (mem inps inp) {
+      out <- oget lhmp.[inp];
+    }
+    elif (ctr < limit) {
+      inps <- inps `|` fset1 inp;
+      ctr <- ctr + 1;
+      out <$ output_distr;
+      lhmp.[inp] <- out;
+      SGOr.guess(snd inp);  (* use of SGOr *)
+    }
+    else {
+      out <- output_default;
+    }
+    return out;
+  }
+
+  proc hash(elem : elem) : output = {
+    if (! mem (dom hmp) elem) {
+      hmp.[elem] <$ output_distr;
+    }
+    return oget hmp.[elem];
+  }
+}.
+
+(* in the following lemma, we have this invariant:
+
+     SecOrIndepInstr.ctr{1} = ConvToSecOrIndepInstr.ctr{2}
+                            = SG.Or.ctr{2} *)
+
+local lemma SecOrIndepInstr_ConvToSecOrIndepInstr_SGOr_lhash :
+  equiv
+  [SecOrIndepInstr.lhash ~ ConvToSecOrIndepInstr(SG.SGOr).lhash :
+   ={inp} /\
+   ={secret, guessed}(SecOrIndepInstr, SG.SGOr) /\
+   ={lhmp, ctr, inps}(SecOrIndepInstr, ConvToSecOrIndepInstr) /\
+   SG.SGOr.ctr{2} = ConvToSecOrIndepInstr.ctr{2} ==>
+   ={res} /\
+   ={secret, guessed}(SecOrIndepInstr, SG.SGOr) /\
+   ={lhmp, ctr, inps}(SecOrIndepInstr, ConvToSecOrIndepInstr) /\
+   SG.SGOr.ctr{2} = ConvToSecOrIndepInstr.ctr{2}].
+proof.
+proc.
+if => //; first auto.
+if => //.
+inline SG.SGOr.guess.
+rcondt {2} 6; first move => &m; auto.
+swap {2} 6 -3; swap {1} 5 -4; swap {2} [6..7] -5.
+auto.
+auto.
+qed.
+
+local lemma SecOrIndepInstr_ConvToSecOrIndepInstr_SGOr_hash :
+  equiv
+  [SecOrIndepInstr.hash ~ ConvToSecOrIndepInstr(SG.SGOr).hash :
+   ={elem} /\
+   ={hmp}(SecOrIndepInstr, ConvToSecOrIndepInstr) ==>
+   ={res} /\
+   ={hmp}(SecOrIndepInstr, ConvToSecOrIndepInstr)].
+proof. sim. qed.
+
+(* concrete secret guessing adversary *)
+
+local module (SGAdv : SG.SG_ADV) (SGOr : SG.SG_OR) = {
+  module SA = SecAdv(ConvToSecOrIndepInstr(SGOr))
+
+  proc main() : unit = {
+    ConvToSecOrIndepInstr(SGOr).init(sec_default);
+    SA.main();
+  }
+}.
+
+(* work up to showing that concrete secret guessing adversary is lossless *)
+
+local lemma ConvToSecOrIndepInstr_Lossless_lhash (SGOr <: SG.SG_OR{SGAdv}) :
+  islossless SGOr.guess =>
+  islossless ConvToSecOrIndepInstr(SGOr).lhash.
+proof.
+move => ll; proc.
+if => //; first auto.
+if => //.
+call (_ : true ==> true); first apply ll.
+auto; progress; apply output_distr_ll.
+auto.
+qed.
+
+local lemma ConvToSecOrIndepInstr_Lossless_hash (SGOr <: SG.SG_OR{SGAdv}) :
+  islossless SGOr.guess =>
+  islossless ConvToSecOrIndepInstr(SGOr).hash.
+proof.
+move => ll; proc.
+if => //.
+auto; progress; apply output_distr_ll.
+qed.
+
+local lemma SGAdv_Lossless_main (SGOr <: SG.SG_OR{SGAdv}) :
+  islossless SGOr.guess =>
+  islossless SGAdv(SGOr).main.
+proof.
+move => llGuess; proc.
+inline *; sp.
+call (_ : true ==> true).
+apply (SecAdv_ll (ConvToSecOrIndepInstr(SGOr))).
+apply (ConvToSecOrIndepInstr_Lossless_lhash SGOr);
+  apply llGuess.
+apply (ConvToSecOrIndepInstr_Lossless_hash SGOr);
+  apply llGuess.
+auto.
+qed.
+
+(* now we show an equivalence between GIndepInstr and
+   SG.Guessing(SGAdv): *)
+
+local lemma GIndepInstr_SGGuessing_SGAdv_main :
+  equiv
+  [GIndepInstr.main ~ SG.Guessing(SGAdv).main :
+   true ==> ={guessed}(SecOrIndepInstr, SG.SGOr)].
+proof.
+proc.
+inline *; wp.
+seq 8 10 :
+  (={secret, guessed}(SecOrIndepInstr, SG.SGOr) /\
+   ={lhmp, hmp, ctr, inps}(SecOrIndepInstr, ConvToSecOrIndepInstr) /\
+   SG.SGOr.ctr{2} = ConvToSecOrIndepInstr.ctr{2}).
+auto.
+call
+  (_ :
+   ={secret, guessed}(SecOrIndepInstr, SG.SGOr) /\
+   ={lhmp, hmp, ctr, inps}(SecOrIndepInstr, ConvToSecOrIndepInstr) /\
+   SG.SGOr.ctr{2} = ConvToSecOrIndepInstr.ctr{2}).
+conseq SecOrIndepInstr_ConvToSecOrIndepInstr_SGOr_lhash => //.
+conseq SecOrIndepInstr_ConvToSecOrIndepInstr_SGOr_hash => //.
+auto.
+qed.
+
+local lemma GIndepInstr_SGGuessing_SGAdv &m :
+  Pr[GIndepInstr.main() @ &m : SecOrIndepInstr.guessed] =
+  Pr[SG.Guessing(SGAdv).main() @ &m : SG.SGOr.guessed].
+proof. by byequiv GIndepInstr_SGGuessing_SGAdv_main. qed.
+
+local lemma GIndepInstr_Guessed &m :
+  Pr[GIndepInstr.main() @ &m : SecOrIndepInstr.guessed] <=
+  limit%r / (2 ^ sec_len)%r.
+proof.
+rewrite (GIndepInstr_SGGuessing_SGAdv &m)
+        (SG.GuessingProb SGAdv &m).
+qed.
+
+(* to prove an equivalence between GDepInstr and GIndepInstr,
+   we need a relational invariant: *)
+
+pred invar
+     (sec  : sec,
+      mp   : (elem * sec, output)fmap,
+      lhmp : (elem * sec, output)fmap,
+      hmp  : (elem, output)fmap,
+      inps : (elem * sec)fset) =
+  (forall (elem : elem),
+   mem (dom mp) (elem, sec) <=> mem (dom hmp) elem) /\
+  (forall (elem : elem), oget mp.[(elem, sec)] = oget hmp.[elem]) /\
+  (forall (elem : elem, sec' : sec),
+   sec' <> sec => mem (dom mp) (elem, sec') <=> mem (dom lhmp) (elem, sec')) /\
+  (forall (elem : elem, sec' : sec),
+   sec' <> sec => oget mp.[(elem, sec')] = oget lhmp.[(elem, sec')]) /\
+  (forall (inp : elem * sec),
+   mem inps inp <=> mem (dom mp) inp /\ snd inp <> sec).
+
+local lemma invar_oget_mp_lhmp
+  (sec  : sec,
+   mp   : (elem * sec, output)fmap,
+   lhmp : (elem * sec, output)fmap,
+   hmp  : (elem, output)fmap,
+   inps : (elem * sec)fset,
+   inp  : elem * sec) :
+  invar sec mp lhmp hmp inps =>
+  mem inps inp =>
+  oget mp.[inp] = oget lhmp.[inp].
+proof.
+move => invr mem_inps_inp.
+have -> : inp = (fst inp, snd inp); smt().
+qed.
+
+local lemma invar_update_lhmp
+  (sec  : sec,
+   mp   : (elem * sec, output)fmap,
+   lhmp : (elem * sec, output)fmap,
+   hmp  : (elem, output)fmap,
+   inps : (elem * sec)fset,
+   inp  : elem * sec,
+   out  : output) :
+  invar sec mp lhmp hmp inps =>
+  ! mem inps inp =>
+  snd inp <> sec =>
+  ! mem (dom mp) inp =>
+  invar sec mp.[inp <- out] lhmp.[inp <- out] hmp (inps `|` fset1 inp).
+proof.
+move => invr; rewrite pairS /=.
+move => not_mem_inps_inp  snd_inp_ne_sec not_mem_dom_mp_inp.
+split.
+move => elem.
+split => [mem_dom_mp_upd_elem_sec | mem_dom_hmp_elem].
+smt(domP in_fsetU in_fset1).
+rewrite domP in_fsetU in_fset1 /#.
+split; first smt(getP).
+split.
+move => elem sec' ne_sec_sec'.
+split => [mem_dom_mp_upd_elem_sec' | mem_dom_lhmp_upd_elem_sec'].
+rewrite domP in_fsetU.
+rewrite domP in_fsetU in mem_dom_mp_upd_elem_sec'.
+smt().
+rewrite domP in_fsetU.
+rewrite domP in_fsetU in mem_dom_lhmp_upd_elem_sec'.
+smt().
+split; first smt(getP).
+smt(domP in_fsetU in_fset1 getP).
+qed.
+
+local lemma invar_update_hmp
+  (sec  : sec,
+   mp   : (elem * sec, output)fmap,
+   lhmp : (elem * sec, output)fmap,
+   hmp  : (elem, output)fmap,
+   inps : (elem * sec)fset,
+   elem : elem,
+   out  : output) :
+  invar sec mp lhmp hmp inps =>
+  ! mem (dom mp) (elem, sec) =>
+  invar sec mp.[(elem, sec) <- out] lhmp hmp.[elem <- out] inps.
+proof.
+move => invr not_mem_dom_mp_elem_sec.
+split; first smt(domP in_fsetU1).
+split; first smt(getP).
+split; first smt(domP in_fsetU1).
+split; first smt(getP).
+smt(domP in_fsetU1).
+qed.
+
+(* in the following lemmas, we use reasoning up to failure *)
+
+local lemma SecOrDepInstr_SecOrIndepInstr_lhash :
+  equiv
+  [SecOrDepInstr.lhash ~ SecOrIndepInstr.lhash :
+   ={inp} /\ ! SecOrDepInstr.guessed{1} /\
+   ={guessed, secret, ctr, inps}(SecOrDepInstr, SecOrIndepInstr) /\
+   invar
+   SecOrDepInstr.secret{1} SecOrDepInstr.mp{1} SecOrIndepInstr.lhmp{2}
+   SecOrIndepInstr.hmp{2} SecOrDepInstr.inps{1} ==>
+   ={guessed}(SecOrDepInstr, SecOrIndepInstr) /\
+   (! SecOrDepInstr.guessed{1} =>
+    ={res} /\
+    ={secret, ctr, inps}(SecOrDepInstr, SecOrIndepInstr) /\
+    invar
+    SecOrDepInstr.secret{1} SecOrDepInstr.mp{1} SecOrIndepInstr.lhmp{2}
+    SecOrIndepInstr.hmp{2} SecOrDepInstr.inps{1})].
+proof.
+proc.
+if => //; first auto; smt(invar_oget_mp_lhmp).
+if => //.
+swap [1..2] 2; swap {1} 2 -1; swap {2} 5 -4.
+if => //.
+seq 1 1 :
+  (SecOrDepInstr.guessed{1} = SecOrIndepInstr.guessed{2} /\
+   SecOrDepInstr.guessed{1}); first auto.
+auto; if {1}; auto; smt(output_distr_ll).
+rcondf {1} 1; first auto; smt().
+auto => &1 &2
+        [[[[-> [guessed [[-> [-> [-> ->]]] invr]]] not_mem_inps_inp] lt_ctr_limit]
+         snd_inp_ne_sec].
+split => // _.
+split => // _ out in_supp.
+split => // _.
+split => // _ /= not_guessed.
+apply invar_update_lhmp => //; smt().
+auto.
+qed.
+
+local lemma SecOrDepInstr_SecOrIndepInstr_hash :
+  equiv
+  [SecOrDepInstr.hash ~ SecOrIndepInstr.hash :
+   ={elem} /\ ! SecOrDepInstr.guessed{1} /\
+   ={guessed, secret, ctr, inps}(SecOrDepInstr, SecOrIndepInstr) /\
+   invar
+   SecOrDepInstr.secret{1} SecOrDepInstr.mp{1} SecOrIndepInstr.lhmp{2}
+   SecOrIndepInstr.hmp{2} SecOrDepInstr.inps{1} ==>
+   ={guessed}(SecOrDepInstr, SecOrIndepInstr) /\
+   (! SecOrDepInstr.guessed{1} =>
+    ={res} /\
+    ={secret, ctr, inps}(SecOrDepInstr, SecOrIndepInstr) /\
+    invar
+    SecOrDepInstr.secret{1} SecOrDepInstr.mp{1} SecOrIndepInstr.lhmp{2}
+    SecOrIndepInstr.hmp{2} SecOrDepInstr.inps{1})].
+proof.
+proc.
+if; first smt().
+auto => &1 &2.
+move => [[-> [_ [[-> [-> [-> ->]]] invr]]] not_mem_dom_mp_elem_sec].
+split => // _.
+split => // _.
+move => mp in_supp.
+split => // _.
+split => // _ /= _.
+split; first smt(getP).
+apply invar_update_hmp => //.
+auto; smt().
+qed.
+
+local lemma GDepInstr_GIndepInstr_main :
+  equiv
+  [GDepInstr.main ~ GIndepInstr.main :
+   true ==>
+   (SecOrDepInstr.guessed{1} <=> SecOrIndepInstr.guessed{2}) /\
+   (! SecOrIndepInstr.guessed{2} => (res{1} <=> res{2}))].
+proof.
+proc.
+seq 2 2 :
+  (={sec} /\ ! SecOrDepInstr.guessed{1} /\
+   ={guessed, secret, ctr, inps}(SecOrDepInstr, SecOrIndepInstr) /\
+   invar
+   SecOrDepInstr.secret{1} SecOrDepInstr.mp{1} SecOrIndepInstr.lhmp{2}
+   SecOrIndepInstr.hmp{2} SecOrDepInstr.inps{1}).
+inline *; auto; progress; smt(dom_eq0 dom0 in_fset0 map0P).
+call
+  (_ :
+   ! SecOrDepInstr.guessed{1} /\
+   ={guessed, secret, ctr, inps}(SecOrDepInstr, SecOrIndepInstr) /\
+   invar
+   SecOrDepInstr.secret{1} SecOrDepInstr.mp{1} SecOrIndepInstr.lhmp{2}
+   SecOrIndepInstr.hmp{2} SecOrDepInstr.inps{1} ==>
+   ={guessed}(SecOrDepInstr, SecOrIndepInstr) /\
+   (! SecOrDepInstr.guessed{1} => ={res})).
+proc
+  (SecOrIndepInstr.guessed)
+  (={guessed, secret, ctr, inps}(SecOrDepInstr, SecOrIndepInstr) /\
+   invar
+   SecOrDepInstr.secret{1} SecOrDepInstr.mp{1} SecOrIndepInstr.lhmp{2}
+   SecOrIndepInstr.hmp{2} SecOrDepInstr.inps{1})
+  (SecOrDepInstr.guessed{1}).
+smt(). smt(). apply SecAdv_ll.
+conseq SecOrDepInstr_SecOrIndepInstr_lhash; trivial; smt().
+move => &2 _; proc.
+if; first auto.
+if.
+seq 2 : (SecOrDepInstr.guessed).
+auto. auto.
+if; [auto | auto; progress; apply output_distr_ll].
+hoare; auto. smt(). auto.
+move => &1; proc.
+if; first auto.
+if.
+seq 2 : (SecOrDepInstr.guessed{1} /\ SecOrIndepInstr.guessed).
+auto. auto. auto; progress; apply output_distr_ll.
+hoare; auto. smt(). auto.
+conseq SecOrDepInstr_SecOrIndepInstr_hash; smt().
+move => &2 _; proc.
+if; [auto; progress; apply output_distr_ll | auto].
+move => &1; proc.
+if; [auto; progress; apply output_distr_ll | auto].
+skip; smt().
+qed.
+
+(* now we use the preceding lemma plus the fundamental lemma (via
+   byequiv to prove: *)
+
+local lemma GDepInstr_GIndepInstr &m :
+  `| Pr[GDepInstr.main() @ &m : res] -
+     Pr[GIndepInstr.main() @ &m : res] | <=
+  limit%r / (2 ^ sec_len)%r.
+proof.
+cut FundLem :
+  `| Pr[GDepInstr.main() @ &m : res] -
+     Pr[GIndepInstr.main() @ &m : res] | <=
+   Pr[GIndepInstr.main() @ &m : SecOrIndepInstr.guessed].
+  byequiv
+    (_ :
+     true ==>
+     (SecOrDepInstr.guessed{1} <=> SecOrIndepInstr.guessed{2}) /\
+     (! SecOrIndepInstr.guessed{2} => (res{1} <=> res{2}))) :
+    (SecOrDepInstr.guessed) => //.
+  apply GDepInstr_GIndepInstr_main.
+rewrite (ler_trans Pr[GIndepInstr.main() @ &m : SecOrIndepInstr.guessed])
+        1:FundLem (GIndepInstr_Guessed &m).
+qed.
+
+lemma GDep_GIndep' &m :
+  `| Pr[GDep(SecAdv).main() @ &m : res] -
+     Pr[GIndep(SecAdv).main() @ &m : res] | <=
+  limit%r / (2 ^ sec_len)%r.
+proof.
+rewrite (GDep_GDepInstr &m) -(GIndepInstr_GIndep &m)
+        (GDepInstr_GIndepInstr &m).
+qed.
+
+end section.
+
+lemma GDep_GIndep (SecAdv <: SEC_ADV{SecOrDep, SecOrIndep}) &m :
+  (forall (SOr <: SEC_OR{SecAdv}),
+   islossless SOr.lhash => islossless SOr.hash =>
+   islossless SecAdv(SOr).main) =>
+  `|Pr[GDep(SecAdv).main() @ &m : res] -
+    Pr[GIndep(SecAdv).main() @ &m : res]| <=
+  limit%r / (2 ^ sec_len)%r.
+proof.
+move => SecAdv_ll.
+apply (GDep_GIndep' SecAdv SecAdv_ll &m).
+qed.

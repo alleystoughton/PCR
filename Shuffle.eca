@@ -1,0 +1,104 @@
+(* Shuffle.ec *)
+
+(* Random Shuffling of Lists *)
+
+(* This abstract theory provides a module with a procedure for
+   randomly shuffling a list of elements of type t, where
+   t is a parameter to the theory *)
+
+(***************************** Standard Theories ******************************)
+
+require import AllCore Distr DInterval Real List FSet.
+require import StdRing. import RField.
+require import StdOrder. import RealOrder.
+
+(**************************** Auxiliary Theories ******************************)
+
+require import DistrAux.
+
+(***************************** Theory Parameters ******************************)
+
+type t.
+
+op dflt : t.  (* default element *)
+
+(************************** End of Theory Parameters **************************)
+
+module Shuffle = {
+  proc shuffle(xs : t list) : t list = {
+    var ys : t list;
+    var i : int;
+    ys <- [];
+    while (0 < size xs) {
+      i <$ [0 .. size xs - 1];
+      ys <- ys ++ [nth dflt xs i];
+      xs <- trim xs i;
+    }
+    return ys;
+  }
+}.
+
+lemma Shuffle_shuffle_ll : islossless Shuffle.shuffle.
+proof.
+proc.
+while (true) (size xs).
+move => z; wp; rnd (fun i, 0 <= i < size xs); skip => /> &hr gt0_xs.
+split; first by apply dinter_range_pred.
+move => _ v in_supp_v_range; split => [ge0_v lt_v_sz_xs | _].
+rewrite size_trim // /#.
+split => [| _].
+by rewrite (dinter_in_supp_ge 0 (size xs{hr} - 1) v).
+have /# : v <= size xs{hr} - 1
+  by rewrite (dinter_in_supp_le 0 (size xs{hr} - 1) v).
+auto; smt(size_ge0).
+qed.
+
+lemma Shuffle_shuffle_perm (zs : t list) :
+  equiv
+  [Shuffle.shuffle ~ Shuffle.shuffle :
+   ={xs} /\ xs{1} = zs ==>
+   ={res} /\ perm_eq res{1} zs].
+proof.
+proc.
+while (={xs, ys} /\ perm_eq (xs{1} ++ ys{1}) zs).
+auto => /> &2 perm_eq_xs_cat_ys_zs gt0_sz_xs2 i in_supp_i_range.
+by rewrite /trim catA perm_catCl -(catA (take i xs{2}))
+           (catA [nth dflt xs{2} i]) perm_catCAl !catA
+           cats1 -(take_nth dflt) 1:dinter_in_supp_le_lt //
+           cat_take_drop.
+auto => |> &2.
+split; first rewrite cats0 perm_eq_refl.
+move => xs ys not_lt_0_sz_xs _.
+have -> // : xs = []
+  by rewrite -size_eq0 IntExtra.eqn0Ngt 1:size_ge0.
+qed.
+
+lemma Shuffle_shuffle_perm_phoare (zs : t list) :
+  phoare
+  [Shuffle.shuffle :
+   xs = zs ==> perm_eq res zs] = 1%r.
+proof.
+proc; sp.
+while (perm_eq (xs ++ ys) zs) (size xs).
+progress; wp; rnd (fun i, 0 <= i < size xs).
+auto => |> &hr perm_eq_xs_cat_ys_zs gt0_sz_xs.
+split; first by rewrite dinter_range_pred.
+move => _ i in_supp_i_0_to_sz_xs_min1.
+split => [ge0_i lt_i_sz_xs | _ _]. 
+split.
+by rewrite /trim catA perm_catCl -(catA (take i xs{hr}))
+           (catA [nth dflt xs{hr} i]) perm_catCAl !catA
+           cats1 -(take_nth dflt) 1:/# cat_take_drop.
+rewrite size_trim /#.
+split => [| _].
+by rewrite (dinter_in_supp_ge 0 (size xs{hr} - 1) i).
+have /# : i <= size xs{hr} - 1
+  by rewrite (dinter_in_supp_le 0 (size xs{hr} - 1) i).
+auto => |> &hr.
+split; first rewrite cats0 perm_eq_refl.
+move => xs ys.
+split; first smt(size_ge0).
+move => not_gt0_sz_xs.
+have -> // : xs = []
+  by rewrite -size_eq0 IntExtra.eqn0Ngt 1:size_ge0.
+qed.

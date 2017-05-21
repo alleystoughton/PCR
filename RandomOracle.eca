@@ -1,0 +1,2070 @@
+(* RandomOracle.eca *)
+
+(* Random Oracle *)
+
+(* This abstract theory implements random oracles, giving both a
+   module type OR and a module Or implementing that module type. It
+   also defines two wrappers for random oracles, giving "limited
+   hashing" and "counted hashing" views to an underlying random
+   oracle.
+
+   With limited hashing, once more than the limited number of distinct
+   inputs has been hashed, hashing fresh inputs yields a dummy result,
+   whereas hashing previously hashed inputs continues to work.
+
+   With counted hashing, both counted and ordinary hashing procedures
+   are provided. Ordinary hashing simply calls the underlying random
+   oracle. Counted hashing also calls the underlying oracle, but it
+   keeps track of the number of distinct inputs that are hashed,
+   as long as that number is under budget; when the budget is
+   exceeded, that is recorded. A procedure for checking whether
+   the budget has been exceeded is also provided.
+
+   The abstract theory also implements two additional abstract
+   sub-theories: budgeted random oracles and a mechanism for removing
+   redundant hashing. (See below for the details.) *)
+
+(***************************** Standard Theories ******************************)
+
+require import AllCore Distr Mu_mem Dexcepted FSet NewFMap List
+               FelTactic.
+require import StdBigop. import Bigreal BRA.
+require import StdOrder. import RealOrder.
+require import StdRing. import RField.
+require IterProc.
+
+(**************************** Auxiliary Theories ******************************)
+
+require import DistrAux ListAux FSetAux.
+
+(**************************** Supporting Theories *****************************)
+
+require import Inj.
+
+(***************************** Theory Parameters ******************************)
+
+type input.  (* type of oracle inputs *)
+
+(* oracle outputs are bitstrings of length output_len *)
+
+op output_len : int.  (* length of oracle output *)
+
+axiom output_len_ge0 : 0 <= output_len.
+
+type output.  (* type of oracle outputs *)
+
+op output_default : output.  (* default output *)
+
+(* uniform distribution on outputs *)
+
+op output_distr : output distr.
+
+axiom mu1_output_distr (out : output) :
+  mu1 output_distr out = 1%r / (2 ^ output_len)%r.
+
+axiom output_distr_ll : is_lossless output_distr.
+
+(************************** End of Theory Parameters **************************)
+
+(* random oracle module type *)
+
+module type OR = {
+  proc init() : unit  (* initialize oracle *)
+
+  proc hash(inp : input) : output  (* hash an input *)
+}.
+
+(* random oracle *)
+
+module Or : OR = {
+  var mp : (input, output)fmap
+
+  proc init() : unit = {
+    mp <- map0;
+  }
+
+  proc hash(inp : input) : output = {
+    if (! mem (dom mp) inp) {
+      mp.[inp] <$ output_distr;
+    }
+    return oget mp.[inp];
+  }
+}.
+
+(*************************** Limited Random Oracle ****************************)
+
+(* With limited hashing, once more than the limited number of distinct
+   inputs has been hashed, hashing fresh inputs yields a dummy result,
+   whereas hashing previously hashed inputs continues to work *)
+
+abstract theory Limited.
+
+(* this abstract subtheory implements limited random oracles,
+   paramterized by ordinary ones *)
+
+(************************** Begin Theory Parameters ***************************)
+
+(* oracle hashing limit *)
+
+op limit : int.
+
+axiom limit_ge0 : 0 <= limit.
+
+(*************************** End Theory Parameters ****************************)
+
+(* limited random oracle, parameterized by random oracle O
+
+   initialization *doesn't* initialize O
+
+   when more than limit distinct calls are made to hash, output_default
+   is returned, without consulting O *)
+
+module LOr(O : OR) : OR = {
+  var inps : input fset  (* seen inputs with counted hashing (as opposed to
+                            direct calls to O.hash), when within limit *)
+  var ctr : int          (* ctr = card inps *)
+
+  proc init() : unit = {
+    inps <- fset0;
+    ctr <- 0;
+  }
+
+  proc hash(inp : input) : output = {
+    var out : output;
+
+    if (mem inps inp) {  (* already seen, when within limit *)
+      out <@ O.hash(inp);
+    }
+    else {  (* not already seen, when under limit *)
+      if (ctr < limit) {  (* under limit; invariant: ctr <= limit *)
+        inps <- inps `|` fset1 inp;
+        ctr <- ctr + 1;
+        out <- O.hash(inp);  (* consult O *)
+      }
+      else {  (* over limit *)
+        out <- output_default;
+      }
+    }
+    return out;
+  }
+}.
+
+end Limited.
+
+(*************************** Counted Random Oracle ****************************)
+
+(* With counted hashing, both counted and ordinary hashing procedures
+   are provided. Ordinary hashing simply calls the underlying random
+   oracle. Counted hashing also calls the underlying oracle, but it
+   keeps track of the number of distinct inputs that are hashed, as
+   long as that number is under budget; when the budget is exceeded,
+   that is recorded. A procedure for checking whether the budget has
+   been exceeded is also provided *)
+
+abstract theory Counted.
+
+(* this abstract subtheory implements counted random oracles,
+   paramterized by ordinary ones *)
+
+(************************** Begin Theory Parameters ***************************)
+
+(* budget for counted hashing *)
+
+op budget : int.
+
+axiom budget_ge0 : 0 <= budget.
+
+(*************************** End Theory Parameters ****************************)
+
+(* counted random oracle module type *)
+
+module type COR = {
+  (* initialization *)
+
+  proc init() : unit  
+
+  (* counted hashing *)
+
+  proc chash(inp : input) : output
+
+  (* ordinary (uncounted) hashing *)
+
+  proc hash(inp : input) : output
+
+  (* are we still within budget? *)
+
+  proc within_budget() : bool
+}.
+
+(* counted random oracle, parameterized by random oracle O
+
+   initialization *doesn't* initialize O *)
+
+module COr(O : OR) : COR = {
+  var inps : input fset  (* seen inputs with counted hashing (as opposed to
+                            ordinary hashing or direct calls to O.hash), when
+                            within budget *)
+  var ctr : int          (* ctr = card inps *)
+  var over : bool        (* over budget *)
+
+  proc init() : unit = {
+    inps <- fset0;
+    ctr <- 0;
+    over <- false;
+  }
+
+  proc chash(inp : input) : output = {
+    var out : output;
+
+    if (! mem inps inp) {  (* not already seen, when within budget *)
+      if (ctr < budget) {  (* under budget; invariant: ctr <= budget *)
+        ctr <- ctr + 1;
+        inps <- inps `|` fset1 inp;
+      }
+      else {
+        over <- true;  (* over budget *)
+      }
+    }
+    out <@ O.hash(inp);  (* hash normally, even if over budget *)
+    return out;
+  }
+
+  proc hash = O.hash
+
+  proc within_budget() : bool = {
+    return !over;
+  }
+}.
+
+end Counted.
+
+(*************************** Budgeted Random Oracle ***************************)
+
+(* A budgeted random oracle implements ordinary hashing, as well as
+   providing budgeted hashing procedures for the Adversary, Server and
+   Client, each with their own individual budgets. The oracle has a
+   single map, shared between all procedures.  Each call to the
+   Client's hashing procedure counts toward the Client's budget,
+   whereas only distinct inputs to the Adversary's hashing procedure
+   count toward its budget, and similarly for the Server's hashing
+   procedure. The sum, budget, of the three budgets is restricted to
+   be no more than the number of bitstrings of length output_len. Once
+   a party's individual budget has been exceeded, subsequent calls to
+   that party's hashing procedure do ordinary hashing (looking up the
+   input's value in the oracle's map, if it's already set). A budgeted
+   random oracle also provides a procedure for testing whether the
+   Adversary is still within budget, and their are global variables
+   recording whether each party is still within budget.
+
+   Two implementations of budgeted random oracles are provided:
+
+   * one in which hash collisions are possible (but in which they
+     aren't forced, as long as only budgeted hashing is performed, and
+     all three party's budgets are respected (individually);
+
+   * one whose map is guaranteed to remain collision-free (injective),
+     as long as only budgeted hashing is performed, and all three
+     party's budgets are respected.
+
+   The abstract theory proves a Switching Lemma, upper bounding the
+   distance between games using the two budgeted random oracle
+   implementations by
+
+     (budget * (budget - 1))%r / (2 ^ (output_len + 1))%r *)
+
+abstract theory BudgetedRandomOracle.
+
+(*********************** Beginning of Theory Parameters ***********************)
+
+(* hashing budgets *)
+
+op adv_budget : int.  (* Adversary's budget *)
+
+axiom adv_budget_ge0 : 0 <= adv_budget.
+
+op serv_budget : int.  (* Server's budget *)
+
+axiom serv_budget_ge0 : 0 <= serv_budget.
+
+op clnt_budget : int.  (* Client's budget *)
+
+axiom clnt_budget_ge0 : 0 <= clnt_budget.
+
+(* the following axiom implies that hash collisions aren't *forced*,
+   if no more than the sum of the three budgets distinct inputs are
+   hashed *)
+
+axiom sum_budgets_ub :
+  adv_budget + serv_budget + clnt_budget <= 2 ^ output_len.
+
+(************************** End of Theory Parameters **************************)
+
+lemma output_distr_minus_ll (outs : output fset) :
+  card outs < 2 ^ output_len =>
+  is_lossless (output_distr \ mem outs).
+proof.
+apply lossless_minus;
+  [apply output_len_ge0 | apply mu1_output_distr | apply output_distr_ll].
+qed.
+
+op budget = adv_budget + serv_budget + clnt_budget.
+
+lemma budget_ge0 : 0 <= budget.
+proof.
+rewrite /budget addz_ge0 1:addz_ge0 1:adv_budget_ge0 1:serv_budget_ge0
+        clnt_budget_ge0.
+qed.
+
+lemma budget_ub : budget <= 2 ^ output_len.
+proof. rewrite /budget sum_budgets_ub. qed.
+
+(* upper bound on probability of hash collision happening if no more
+   than budget distinct inputs are hashed *)
+
+op coll_bound : real = (budget * (budget - 1))%r / (2 ^ (output_len + 1))%r.
+
+(* module type of budgeted random oracles *)
+
+module type BOR = {
+  (* initialization *)
+
+  proc init() : unit  
+
+  (* Adversary's budgeted hashing *)
+
+  proc adv_bhash(inp : input) : output
+
+  (* is Adversary still within budget? *)
+
+  proc adv_within_budget() : bool
+
+  (* Server's budgeted hashing *)
+
+  proc server_bhash(inp : input) : output
+
+  (* Client's budgeted hashing *)
+
+  proc client_bhash(inp : input) : output
+
+  (* ordinary (unbudgeted) hashing *)
+
+  proc hash(inp : input) : output
+}.
+
+(* collision-possible implementation *)
+
+module BOr : BOR = {
+  var mp : (input, output) fmap
+
+  var adv_inps : input fset  (* inputs seen by Adversary, while
+                                within budget *)
+  var adv_ctr : int  (* adv_ctr = card adv_inps;
+                        invariant: adv_ctr <= adv_budget *)
+  var adv_over : bool  (* is Adversary over budget? *)
+
+  var serv_inps : input fset  (* inputs seen by Server, while
+                                 within budget *)
+  var serv_ctr : int  (* serv_ctr = card serv_inps;
+                         invariant: serv_ctr <= serv_budget *)
+  var serv_over : bool  (* is Server over budget? *)
+
+  var clnt_ctr : int  (* number of hashes done by Client, while
+                         within budget;
+                         invariant: clnt_ctr <= clnt_budget *)
+  var clnt_over : bool  (* is Client over budget? *)
+
+  proc init() : unit = {
+    mp <- map0;
+    adv_inps <- fset0; adv_ctr <- 0; adv_over <- false;
+    serv_inps <- fset0; serv_ctr <- 0; serv_over <- false;
+    clnt_ctr <- 0; clnt_over <- false;
+  }
+
+  proc hash(inp : input) : output = {
+    if (! mem (dom mp) inp) {
+      mp.[inp] <$ output_distr;
+    }
+    return oget mp.[inp];
+  }
+
+  proc adv_bhash(inp : input) : output = {
+    var out : output;
+
+    if (! mem adv_inps inp) {
+      if (adv_ctr < adv_budget) {
+        adv_ctr <- adv_ctr + 1;
+        adv_inps <- adv_inps `|` fset1 inp;
+      }
+      else {
+        adv_over <- true;
+      }
+    }
+    out <@ hash(inp);
+    return out;
+  }
+
+  proc adv_within_budget() : bool = {
+    return !adv_over;
+  }
+
+  proc server_bhash(inp : input) : output = {
+    var out : output;
+
+    if (! mem serv_inps inp) {
+      if (serv_ctr < serv_budget) {
+        serv_ctr <- serv_ctr + 1;
+        serv_inps <- serv_inps `|` fset1 inp;
+      }
+      else {
+        serv_over <- true;
+      }
+    }
+    out <@ hash(inp);
+    return out;
+  }
+
+  proc client_bhash(inp : input) : output = {
+    var out : output;
+
+    if (clnt_ctr < clnt_budget) {
+      clnt_ctr <- clnt_ctr + 1;
+    }
+    else {
+      serv_over <- true;
+    }
+   out <@ hash(inp);
+   return out;
+  }
+}.
+
+(* implementation whose map remains injective (collision-free) as long
+   as all three budgets are (individually) respected and unbudgeted
+   hashing is not done *)
+
+module BOrInj : BOR = {
+  var mp : (input, output) fmap
+  var outs : output fset  (* card outps <=
+                             adv_ctr + serv_ctr + clnt_ctr *)
+
+  var adv_inps : input fset  (* inputs seen by Adversary, while
+                                within budget *)
+  var adv_ctr : int  (* adv_ctr = card adv_inps;
+                        invariant: adv_ctr <= adv_budget *)
+  var adv_over : bool  (* is Adversary over budget? *)
+
+  var serv_inps : input fset  (* inputs seen by Server, while
+                                 within budget *)
+  var serv_ctr : int  (* serv_ctr = card serv_inps;
+                         invariant: serv_ctr <= serv_budget *)
+  var serv_over : bool  (* is Server over budget? *)
+
+  var clnt_ctr : int  (* number of hashes done by Client, while
+                         within budget;
+                         invariant: clnt_ctr <= clnt_budget *)
+  var clnt_over : bool  (* is Client over budget? *)
+
+  proc init() : unit = {
+    mp <- map0; outs <- fset0;
+    adv_inps <- fset0; adv_ctr <- 0; adv_over <- false;
+    serv_inps <- fset0; serv_ctr <- 0; serv_over <- false;
+    clnt_ctr <- 0; clnt_over <- false;
+  }
+
+  proc hash(inp : input) : output = {
+    if (! mem (dom mp) inp) {
+      mp.[inp] <$ output_distr;
+    }
+    return oget mp.[inp];
+  }
+
+  proc adv_bhash(inp : input) : output = {
+    var out : output;
+
+    if (mem adv_inps inp) {
+      out <- oget mp.[inp];
+    }
+    elif (adv_ctr < adv_budget) {
+      if (mem (dom mp) inp) {
+        out <- oget mp.[inp];
+      }
+      else {
+        out <$ output_distr;
+        if (mem outs out) {
+          out <$ output_distr \ mem outs;
+        }
+        outs <- outs `|` fset1 out;
+        mp.[inp] <- out;
+      }
+      adv_ctr <- adv_ctr + 1;
+      adv_inps <- adv_inps `|` fset1 inp;
+    }
+    else {
+      adv_over <- true;
+      out <@ hash(inp);
+    }
+    return out;
+  }
+
+  proc adv_within_budget() : bool = {
+    return !adv_over;
+  }
+
+  proc server_bhash(inp : input) : output = {
+    var out : output;
+
+    if (mem serv_inps inp) {
+      out <- oget mp.[inp];
+    }
+    elif (serv_ctr < serv_budget) {
+      if (mem (dom mp) inp) {
+        out <- oget mp.[inp];
+      }
+      else {
+        out <$ output_distr;
+        if (mem outs out) {
+          out <$ output_distr \ mem outs;
+        }
+        outs <- outs `|` fset1 out;
+        mp.[inp] <- out;
+      }
+      serv_ctr <- serv_ctr + 1;
+      serv_inps <- serv_inps `|` fset1 inp;
+    }
+    else {
+      serv_over <- true;
+      out <@ hash(inp);
+    }
+    return out;
+  }
+
+  proc client_bhash(inp : input) : output = {
+    var out : output;
+
+    if (clnt_ctr < clnt_budget) {
+      if (mem (dom mp) inp) {
+        out <- oget mp.[inp];
+      }
+      else {
+        out <$ output_distr;
+        if (mem outs out) {
+          out <$ output_distr \ mem outs;
+        }
+        outs <- outs `|` fset1 out;
+        mp.[inp] <- out;
+      }
+      clnt_ctr <- clnt_ctr + 1;
+    }
+    else {
+      serv_over <- true;
+      out <@ hash(inp);
+    }
+    return out;
+  }
+}.
+
+(* module type of switching adversaries, parameterized by a budgeted
+   random oracle
+
+   the main procedure is given access to all of the oracle's
+   procedures, *except* init *)
+
+module type SWADV(O : BOR) = {
+  proc * main() : bool
+    {O.adv_bhash O.adv_within_budget O.server_bhash
+     O.client_bhash O.hash}
+}.
+
+(* switching game, parameterized by switching adversary and
+   budgeted random oracle *)
+
+module GSwitching(SWAdv : SWADV, O : BOR) = {
+  module SA = SWAdv(O)
+
+  proc main() : bool = {
+    var b : bool;
+    O.init();
+    b <@ SA.main();
+    return b;
+  }
+}.
+
+(* see end of section for main lemma *)
+
+section.
+
+declare module SWAdv : SWADV{BOr, BOrInj}.
+
+axiom SWAdv_ll :
+  forall (O <: BOR{SWAdv}),
+  islossless O.adv_bhash => islossless O.adv_within_budget =>
+  islossless O.server_bhash =>islossless O.client_bhash =>
+  islossless O.hash =>
+  islossless SWAdv(O).main.
+
+(* version of BOr instrumented to detect collisions, assuming only
+   budgeted hashing is done, and all parties stay within budget *)
+
+local module BOrInstr : BOR = {
+  var mp : (input, output) fmap
+  var outs : output fset
+  var coll : bool  (* has collision happened? *)
+
+  var adv_inps : input fset
+  var adv_ctr : int
+  var adv_over : bool
+
+  var serv_inps : input fset
+  var serv_ctr : int
+  var serv_over : bool
+
+  var clnt_ctr : int
+  var clnt_over : bool
+
+  proc init() : unit = {
+    mp <- map0; outs <- fset0; coll <- false;
+    adv_inps <- fset0; adv_ctr <- 0; adv_over <- false;
+    serv_inps <- fset0; serv_ctr <- 0; serv_over <- false;
+    clnt_ctr <- 0; clnt_over <- false;
+  }
+
+  proc hash(inp : input) : output = {
+    if (! mem (dom mp) inp) {
+      mp.[inp] <$ output_distr;
+    }
+    return oget mp.[inp];
+  }
+
+  proc adv_bhash(inp : input) : output = {
+    var out : output;
+
+    if (mem adv_inps inp) {
+      out <- oget mp.[inp];
+    }
+    elif (adv_ctr < adv_budget) {
+      if (mem (dom mp) inp) {
+        out <- oget mp.[inp];
+      }
+      else {
+        out <$ output_distr;
+        if (mem outs out) {
+          coll <- true;
+        }
+        else {
+          outs <- outs `|` fset1 out;
+        }
+        mp.[inp] <- out;
+      }
+      adv_ctr <- adv_ctr + 1;
+      adv_inps <- adv_inps `|` fset1 inp;
+    }
+    else {
+      adv_over <- true;
+      out <@ hash(inp);
+    }
+    return out;
+  }
+
+  proc adv_within_budget() : bool = {
+    return !adv_over;
+  }
+
+  proc server_bhash(inp : input) : output = {
+    var out : output;
+
+    if (mem serv_inps inp) {
+      out <- oget mp.[inp];
+    }
+    elif (serv_ctr < serv_budget) {
+      if (mem (dom mp) inp) {
+        out <- oget mp.[inp];
+      }
+      else {
+        out <$ output_distr;
+        if (mem outs out) {
+          coll <- true;
+        }
+        else {
+          outs <- outs `|` fset1 out;
+        }
+        mp.[inp] <- out;
+      }
+      serv_ctr <- serv_ctr + 1;
+      serv_inps <- serv_inps `|` fset1 inp;
+    }
+    else {
+      serv_over <- true;
+      out <@ hash(inp);
+    }
+    return out;
+  }
+
+  proc client_bhash(inp : input) : output = {
+    var out : output;
+
+    if (clnt_ctr < clnt_budget) {
+      if (mem (dom mp) inp) {
+        out <- oget mp.[inp];
+      }
+      else {
+        out <$ output_distr;
+        if (mem outs out) {
+          coll <- true;
+        }
+        else {
+          outs <- outs `|` fset1 out;
+        }
+      }
+      mp.[inp] <- out;
+      clnt_ctr <- clnt_ctr + 1;
+    }
+    else {
+      serv_over <- true;
+      out <@ hash(inp);
+    }
+    return out;
+  }
+}.
+
+(* instrumented version of BOrInj *)
+
+local module BOrInjInstr : BOR = {
+  var mp : (input, output) fmap
+  var outs : output fset
+  var coll : bool
+
+  var adv_inps : input fset
+  var adv_ctr : int
+  var adv_over : bool
+
+  var serv_inps : input fset
+  var serv_ctr : int
+  var serv_over : bool
+
+  var clnt_ctr : int
+  var clnt_over : bool
+
+  proc init() : unit = {
+    mp <- map0; outs <- fset0; coll <- false;
+    adv_inps <- fset0; adv_ctr <- 0; adv_over <- false;
+    serv_inps <- fset0; serv_ctr <- 0; serv_over <- false;
+    clnt_ctr <- 0; clnt_over <- false;
+  }
+
+  proc hash(inp : input) : output = {
+    if (! mem (dom mp) inp) {
+      mp.[inp] <$ output_distr;
+    }
+    return oget mp.[inp];
+  }
+
+  proc adv_bhash(inp : input) : output = {
+    var out : output;
+
+    if (mem adv_inps inp) {
+      out <- oget mp.[inp];
+    }
+    elif (adv_ctr < adv_budget) {
+      if (mem (dom mp) inp) {
+        out <- oget mp.[inp];
+      }
+      else {
+        out <$ output_distr;
+        if (mem outs out) {
+          coll <- true;
+          out <$ output_distr \ mem outs;
+        }
+        outs <- outs `|` fset1 out;
+        mp.[inp] <- out;
+      }
+      adv_ctr <- adv_ctr + 1;
+      adv_inps <- adv_inps `|` fset1 inp;
+    }
+    else {
+      adv_over <- true;
+      out <@ hash(inp);
+    }
+    return out;
+  }
+
+  proc adv_within_budget() : bool = {
+    return !adv_over;
+  }
+
+  proc server_bhash(inp : input) : output = {
+    var out : output;
+
+    if (mem serv_inps inp) {
+      out <- oget mp.[inp];
+    }
+    elif (serv_ctr < serv_budget) {
+      if (mem (dom mp) inp) {
+        out <- oget mp.[inp];
+      }
+      else {
+        out <$ output_distr;
+        if (mem outs out) {
+          coll <- true;
+          out <$ output_distr \ mem outs;
+        }
+        outs <- outs `|` fset1 out;
+        mp.[inp] <- out;
+      }
+      serv_ctr <- serv_ctr + 1;
+      serv_inps <- serv_inps `|` fset1 inp;
+    }
+    else {
+      serv_over <- true;
+      out <@ hash(inp);
+    }
+    return out;
+  }
+
+  proc client_bhash(inp : input) : output = {
+    var out : output;
+
+    if (clnt_ctr < clnt_budget) {
+      if (mem (dom mp) inp) {
+        out <- oget mp.[inp];
+      }
+      else {
+        out <$ output_distr;
+        if (mem outs out) {
+          coll <- true;
+          out <$ output_distr \ mem outs;
+        }
+        outs <- outs `|` fset1 out;
+        mp.[inp] <- out;
+      }
+      clnt_ctr <- clnt_ctr + 1;
+    }
+    else {
+      serv_over <- true;
+      out <@ hash(inp);
+    }
+    return out;
+  }
+}.
+
+local lemma GSwitching_BOr_BOrInstr &m :
+  Pr[GSwitching(SWAdv, BOr).main() @ &m : res] =
+  Pr[GSwitching(SWAdv, BOrInstr).main() @ &m : res].
+proof.
+byequiv => //.
+proc.
+seq 1 1 :
+  (={mp, adv_inps, adv_ctr, adv_over, serv_inps, serv_ctr,
+     serv_over, clnt_ctr, clnt_over}(BOr, BOrInstr) /\
+   BOr.adv_inps{1} = fset0 /\ BOr.serv_inps{1} = fset0 /\
+   BOr.mp{1} = map0); inline*; auto.
+call
+  (_ :
+   ={mp, adv_inps, adv_ctr, adv_over, serv_inps, serv_ctr,
+     serv_over, clnt_ctr, clnt_over}(BOr, BOrInstr) /\
+   BOr.adv_inps{1} <= dom BOr.mp{1} /\ BOr.serv_inps{1} <= dom BOr.mp{1}).
+proc.
+case (mem BOr.adv_inps{1} inp{1}).
+rcondf{1} 1; first auto. rcondt{2} 1; first auto.
+inline*; sp; wp.
+rcondf{1} 1; auto; smt().
+rcondt{1} 1; first auto. rcondf{2} 1; first auto.
+if => //.
+inline{1} BOr.hash; swap{1} [1..2] 3; wp; sp.
+case (mem (dom BOr.mp{1}) inp0{1}).
+rcondf{1} 1; first auto. rcondt{2} 1; first auto.
+auto; progress; move => inp; smt(in_fsetU in_fset1).
+rcondt{1} 1; first auto. rcondf{2} 1; first auto.
+auto; progress;
+  [by rewrite getP_eq oget_some |
+   move => inp'; smt(domP in_fsetU) |
+   move => inp'; smt(domP in_fsetU)].
+inline*; wp; sp; if => //.
+auto; progress; move => inp; smt(domP in_fsetU).
+proc; auto.
+proc.
+case (mem BOr.serv_inps{1} inp{1}).
+rcondf{1} 1; first auto. rcondt{2} 1; first auto.
+inline*; sp; wp.
+rcondf{1} 1; auto; smt().
+rcondt{1} 1; first auto. rcondf{2} 1; first auto.
+if => //.
+inline{1} BOr.hash; swap{1} [1..2] 3; wp; sp.
+case (mem (dom BOr.mp{1}) inp0{1}).
+rcondf{1} 1; first auto. rcondt{2} 1; first auto.
+auto; progress; move => inp; smt(in_fsetU in_fset1).
+rcondt{1} 1; first auto. rcondf{2} 1; first auto.
+auto; progress;
+  [by rewrite getP_eq oget_some |
+   move => inp'; smt(domP in_fsetU) |
+   move => inp'; smt(domP in_fsetU)].
+inline*; wp; sp; if => //.
+auto; progress; move => inp; smt(domP in_fsetU).
+proc.
+if => //.
+inline{1} BOr.hash; swap{1} 1 3; wp; sp.
+case (mem (dom BOr.mp{1}) inp0{1}).
+rcondf{1} 1; first auto. rcondt{2} 1; first auto.
+auto; progress; by rewrite set_eq 1:get_oget.
+rcondt{1} 1; first auto. rcondf{2} 1; first auto.
+auto; progress;
+  [by rewrite getP_eq oget_some |
+   move => inp'; smt(domP in_fsetU) |
+   move => inp'; smt(domP in_fsetU)].
+inline*; wp; sp; if => //.
+auto; progress; move => inp; smt(domP in_fsetU).
+proc.
+if => //.
+auto; progress; move => inp; smt(domP in_fsetU).
+auto; progress; by rewrite dom0.
+qed.
+
+local lemma GSwitching_BOrInjInstr_BOrInj &m :
+  Pr[GSwitching(SWAdv, BOrInjInstr).main() @ &m : res] =
+  Pr[GSwitching(SWAdv, BOrInj).main() @ &m : res].
+proof.
+byequiv => //.
+proc.
+seq 1 1 :
+  (={mp, outs, adv_inps, adv_ctr, adv_over, serv_inps, serv_ctr,
+     serv_over, clnt_ctr, clnt_over}(BOrInjInstr, BOrInj));
+  first inline*; auto.
+sim.
+qed.
+
+(* when proving the following lemma, we use reasoning up to failure *)
+
+local lemma GSwitching_BOrInstr_BOrInjInstr_main :
+  equiv
+  [GSwitching(SWAdv, BOrInstr).main ~ GSwitching(SWAdv, BOrInjInstr).main :
+   true ==>
+   (BOrInstr.coll{1} <=> BOrInjInstr.coll{2}) /\
+   (! BOrInjInstr.coll{2} => (res{1} <=> res{2}))].
+proof.
+proc.
+seq 1 1 :
+  (={mp, outs, coll, adv_inps, adv_ctr, adv_over, serv_inps, serv_ctr,
+     serv_over, clnt_ctr, clnt_over}(BOrInstr, BOrInjInstr) /\
+   !BOrInstr.coll{1} /\ BOrInstr.outs{1} = fset0 /\
+   BOrInstr.adv_ctr{1} = 0 /\ BOrInstr.serv_ctr{1} = 0 /\
+   BOrInstr.clnt_ctr{1} = 0).
+inline*; auto.
+call
+  (_ :
+   ={mp, outs, coll, adv_inps, adv_ctr, adv_over, serv_inps, serv_ctr,
+     serv_over, clnt_ctr, clnt_over}(BOrInstr, BOrInjInstr) /\
+   !BOrInstr.coll{1} /\ BOrInstr.outs{1} = fset0 /\
+   BOrInstr.adv_ctr{1} = 0 /\ BOrInstr.serv_ctr{1} = 0 /\
+   BOrInstr.clnt_ctr{1} = 0 ==>
+   BOrInstr.coll{1} = BOrInjInstr.coll{2} /\ (!BOrInstr.coll{1} => ={res})).
+proc
+  (BOrInjInstr.coll)
+  (={mp, outs, coll, adv_inps, adv_ctr, adv_over, serv_inps, serv_ctr,
+     serv_over, clnt_ctr, clnt_over}(BOrInstr, BOrInjInstr) /\
+   BOrInstr.adv_ctr{1} <= adv_budget /\
+   BOrInstr.serv_ctr{1} <= serv_budget /\
+   BOrInstr.clnt_ctr{1} <= clnt_budget /\
+   card BOrInstr.outs{1} <=
+   BOrInstr.adv_ctr{1} + BOrInstr.serv_ctr{1} + BOrInstr.clnt_ctr{1})
+  (BOrInstr.coll{1} /\
+   BOrInjInstr.adv_ctr{2} <= adv_budget /\
+   BOrInjInstr.serv_ctr{2} <= serv_budget /\
+   BOrInjInstr.clnt_ctr{2} <= clnt_budget /\
+   card BOrInjInstr.outs{2} <=
+   BOrInjInstr.adv_ctr{2} + BOrInjInstr.serv_ctr{2} +
+   BOrInjInstr.clnt_ctr{2}) => //.
+progress => //;
+  [apply adv_budget_ge0 | apply serv_budget_ge0 | apply clnt_budget_ge0 |
+   by rewrite fcards0].
+smt().
+apply SWAdv_ll.
+proc.
+if => //; first auto.
+if => //. if => //.
+auto; smt().
+seq 1 1 :
+  (={inp, out} /\
+   ={mp, outs, coll, adv_inps, adv_ctr, adv_over, serv_inps, serv_ctr,
+     serv_over, clnt_ctr, clnt_over}(BOrInstr, BOrInjInstr) /\
+   !BOrInstr.coll{1} /\ BOrInstr.serv_ctr{1} <= serv_budget /\
+   BOrInstr.clnt_ctr{1} <= clnt_budget /\
+   card BOrInstr.outs{1} <=
+   BOrInstr.adv_ctr{1} + BOrInstr.serv_ctr{1} + BOrInstr.clnt_ctr{1} /\
+   ! mem BOrInstr.adv_inps{1} inp{1} /\
+   BOrInstr.adv_ctr{1} < adv_budget /\ ! mem (dom BOrInstr.mp{1}) inp{1}).
+auto.
+if => //.
+swap{2} 1 1; wp; auto; progress;
+  [apply output_distr_minus_ll; smt(budget_ub) | smt() |
+   rewrite fcardUI_indep 1:fsetI1;
+     [smt(in_supp_minus_not_pred) | rewrite fcard1 /#]].
+auto; progress;
+  [smt() | rewrite fcardUI_indep  1:fsetI1 1:/# fcard1 /# |
+   smt() | rewrite fcardUI_indep  1:fsetI1 1:/# fcard1 /#].
+call (_ : ={mp}(BOrInstr, BOrInjInstr)); first if => //; auto.
+auto.
+progress; proc.
+if; first auto.
+if. if.
+auto.
+wp; rnd (predT); skip; progress; apply output_distr_ll.
+call (_ : true).
+if; [rnd (predT); skip; progress; apply output_distr_ll | auto].
+auto.
+progress; proc.
+if; first auto.
+if. if.
+auto; smt().
+seq 1 :
+  (BOrInjInstr.coll /\ BOrInstr.coll{1} /\
+   BOrInjInstr.serv_ctr <= serv_budget /\
+   BOrInjInstr.clnt_ctr <= clnt_budget /\
+   card BOrInjInstr.outs <=
+   BOrInjInstr.adv_ctr + BOrInjInstr.serv_ctr + BOrInjInstr.clnt_ctr /\
+   ! mem BOrInjInstr.adv_inps inp /\ BOrInjInstr.adv_ctr < adv_budget /\
+   ! mem (dom BOrInjInstr.mp) inp).
+auto.
+auto; progress; apply output_distr_ll.
+wp; if.
+auto; progress;
+  [apply output_distr_minus_ll; smt(budget_ub) | smt() |
+   rewrite fcardUI_indep 1:fsetI1;
+     [smt(in_supp_minus_not_pred) | rewrite fcard1 /#]].
+auto; progress; [smt() | rewrite fcardUI_indep  1:fsetI1 1:/# fcard1 /#].
+hoare; auto.
+trivial.
+call (_ : true).
+if; [auto; progress; apply output_distr_ll | auto].
+auto.
+proc; auto.
+progress; proc; auto.
+progress; proc; auto.
+proc.
+if => //; first auto.
+if => //. if => //.
+auto; smt().
+seq 1 1 :
+  (={inp, out} /\
+   ={mp, outs, coll, adv_inps, adv_ctr, adv_over, serv_inps, serv_ctr,
+     serv_over, clnt_ctr, clnt_over}(BOrInstr, BOrInjInstr) /\
+   !BOrInstr.coll{1} /\ BOrInstr.adv_ctr{1} <= adv_budget /\
+   BOrInstr.clnt_ctr{1} <= clnt_budget /\
+   card BOrInstr.outs{1} <=
+   BOrInstr.adv_ctr{1} + BOrInstr.serv_ctr{1} + BOrInstr.clnt_ctr{1} /\
+   ! mem BOrInstr.serv_inps{1} inp{1} /\
+   BOrInstr.serv_ctr{1} < serv_budget /\ ! mem (dom BOrInstr.mp{1}) inp{1}).
+auto.
+if => //.
+swap{2} 1 1; wp; auto; progress;
+  [apply output_distr_minus_ll; smt(budget_ub) | smt() |
+   rewrite fcardUI_indep 1:fsetI1;
+     [smt(in_supp_minus_not_pred) | rewrite fcard1 /#]].
+auto; progress;
+  [smt() | rewrite fcardUI_indep  1:fsetI1 1:/# fcard1 /# |
+   smt() | rewrite fcardUI_indep  1:fsetI1 1:/# fcard1 /#].
+call (_ : ={mp}(BOrInstr, BOrInjInstr)); first if => //; auto.
+auto.
+progress; proc.
+if; first auto.
+if. if.
+auto.
+wp; rnd (predT); skip; progress; apply output_distr_ll.
+call (_ : true).
+if; [rnd (predT); skip; progress; apply output_distr_ll | auto].
+auto.
+progress; proc.
+if; first auto.
+if. if.
+auto; smt().
+seq 1 :
+  (BOrInjInstr.coll /\ BOrInstr.coll{1} /\
+   BOrInjInstr.adv_ctr <= adv_budget /\
+   BOrInjInstr.clnt_ctr <= clnt_budget /\
+   card BOrInjInstr.outs <=
+   BOrInjInstr.adv_ctr + BOrInjInstr.serv_ctr + BOrInjInstr.clnt_ctr /\
+   ! mem BOrInjInstr.serv_inps inp /\ BOrInjInstr.serv_ctr < serv_budget /\
+   ! mem (dom BOrInjInstr.mp) inp).
+auto.
+auto; progress; apply output_distr_ll.
+wp; if.
+auto; progress;
+  [apply output_distr_minus_ll; smt(budget_ub) | smt() |
+   rewrite fcardUI_indep 1:fsetI1;
+     [smt(in_supp_minus_not_pred) | rewrite fcard1 /#]].
+auto; progress; [smt() | rewrite fcardUI_indep  1:fsetI1 1:/# fcard1 /#].
+hoare; auto.
+trivial.
+call (_ : true).
+if; [auto; progress; apply output_distr_ll | auto].
+auto.
+proc.
+if => //; first auto.
+if => //.
+auto; progress;
+  [smt() | smt() | by rewrite set_eq 1:get_oget | smt() | smt()].
+seq 1 1 :
+  (={inp, out} /\
+   ={mp, outs, coll, adv_inps, adv_ctr, adv_over, serv_inps, serv_ctr,
+     serv_over, clnt_ctr, clnt_over}(BOrInstr, BOrInjInstr) /\
+   !BOrInstr.coll{1} /\ BOrInstr.adv_ctr{1} <= adv_budget /\
+   BOrInstr.serv_ctr{1} <= serv_budget /\
+   card BOrInstr.outs{1} <=
+   BOrInstr.adv_ctr{1} + BOrInstr.serv_ctr{1} + BOrInstr.clnt_ctr{1} /\
+   ! mem (dom BOrInstr.mp{1}) inp{1} /\
+   BOrInstr.clnt_ctr{1} < clnt_budget).
+auto.
+if => //.
+swap{2} 1 1; wp; auto; progress;
+  [apply output_distr_minus_ll; smt(budget_ub) | smt() |
+   rewrite fcardUI_indep 1:fsetI1;
+     [smt(in_supp_minus_not_pred) | rewrite fcard1 /#]].
+auto; progress;
+  [smt() | rewrite fcardUI_indep  1:fsetI1 1:/# fcard1 /# |
+   smt() | rewrite fcardUI_indep  1:fsetI1 1:/# fcard1 /#].
+call (_ : ={mp}(BOrInstr, BOrInjInstr)); first if => //; auto.
+auto.
+progress; proc.
+if; first auto.
+if.
+auto.
+wp; rnd (predT); skip; progress; apply output_distr_ll.
+call (_ : true).
+if; [rnd (predT); skip; progress; apply output_distr_ll | auto].
+auto.
+progress; proc.
+if; first auto.
+if.
+auto; smt().
+seq 1 :
+  (BOrInjInstr.coll /\ BOrInstr.coll{1} /\
+   BOrInjInstr.adv_ctr <= adv_budget /\
+   BOrInjInstr.serv_ctr <= serv_budget /\
+   card BOrInjInstr.outs <=
+   BOrInjInstr.adv_ctr + BOrInjInstr.serv_ctr + BOrInjInstr.clnt_ctr /\
+   BOrInjInstr.clnt_ctr < clnt_budget /\
+   ! mem (dom BOrInjInstr.mp) inp).
+auto.
+auto; progress; apply output_distr_ll.
+wp; if.
+auto; progress;
+  [apply output_distr_minus_ll; smt(budget_ub) | smt() |
+   rewrite fcardUI_indep 1:fsetI1;
+     [smt(in_supp_minus_not_pred) | rewrite fcard1 /#]].
+auto; progress; [smt() | rewrite fcardUI_indep  1:fsetI1 1:/# fcard1 /#].
+hoare; auto.
+trivial.
+call (_ : true).
+if; [auto; progress; apply output_distr_ll | auto].
+auto.
+proc; if => //; auto.
+progress; proc.
+if; [auto; progress; apply output_distr_ll | auto].
+progress; proc.
+if; [auto; progress; apply output_distr_ll | auto].
+auto; smt().
+qed.
+
+local lemma mu_output_distr_mem (xs : output fset) :
+  mu output_distr (mem xs) = (card xs)%r / (2 ^ output_len)%r.
+proof.
+apply (mu_mem _ _ (1%r / (2 ^ output_len)%r)) => x mem_xs_x.
+apply mu1_output_distr.
+qed.
+
+(* we prove the following lemma using the Failure Event Lemma (FEL) *)
+
+local lemma GSwitching_BOrInstr_collision &m :
+  Pr[GSwitching(SWAdv, BOrInstr).main() @ &m : BOrInstr.coll] <= coll_bound.
+proof.
+fel
+  1
+  (BOrInstr.adv_ctr + BOrInstr.serv_ctr + BOrInstr.clnt_ctr)
+  (fun ctr, (ctr%r) * (1%r / (2 ^ output_len)%r))
+  budget
+  BOrInstr.coll
+  [BOrInstr.adv_bhash :
+     (! mem BOrInstr.adv_inps inp /\ BOrInstr.adv_ctr < adv_budget);
+   BOrInstr.server_bhash :
+     (! mem BOrInstr.serv_inps inp /\ BOrInstr.serv_ctr < serv_budget);
+   BOrInstr.client_bhash : (BOrInstr.clnt_ctr < clnt_budget)]
+  (BOrInstr.adv_ctr <= adv_budget /\ BOrInstr.serv_ctr <= serv_budget /\
+   BOrInstr.clnt_ctr <= clnt_budget /\
+   card BOrInstr.outs <=
+   BOrInstr.adv_ctr + BOrInstr.serv_ctr + BOrInstr.clnt_ctr).
+rewrite -mulr_suml sumidE 1:budget_ge0 /coll_bound;
+  by rewrite powS 1:output_len_ge0 (fromintM 2) mul1r -mulrA -invfM.
+progress; by rewrite /budget IntOrder.ler_add 1:IntOrder.ler_add.
+inline*; auto; progress;
+  [apply adv_budget_ge0 | apply serv_budget_ge0 | apply clnt_budget_ge0 |
+   by rewrite fcards0].
+proc.
+rcondf 1; first auto. rcondt 1; first auto.
+if.
+conseq (_ : ! BOrInstr.coll ==> _ : 0%r) => //.
+progress; by rewrite divr_ge0 le_fromint // ltzW powPos.
+hoare; auto.
+wp; rnd (mem BOrInstr.outs); skip; progress.
+by rewrite mu_output_distr_mem ler_wpmul2r 1:invr_ge0 le_fromint
+              1:ltzW 1:powPos.
+smt().
+progress; proc.
+rcondf 1; first auto. rcondt 1; first auto.
+wp; if.
+auto; progress; smt().
+auto; progress; first 5 smt().
+rewrite fcardUI_indep 1:fsetI1 1:/# fcard1 /#.
+progress; proc.
+if; first auto.
+if.
+wp; if.
+auto; progress; smt().
+auto; progress; first 6 smt().
+rewrite fcardUI_indep 1:fsetI1 1:/# fcard1 /#.
+call (_ : true); first auto.
+auto.
+proc.
+rcondt 1; first auto.
+if.
+conseq (_ : ! BOrInstr.coll ==> _ : 0%r) => //.
+progress; by rewrite divr_ge0 le_fromint // ltzW powPos.
+hoare; auto.
+wp; rnd (mem BOrInstr.outs); skip; progress.
+by rewrite mu_output_distr_mem ler_wpmul2r 1:invr_ge0 le_fromint
+              1:ltzW 1:powPos.
+smt().
+progress; proc.
+rcondt 1; first auto.
+wp; if.
+auto; progress; smt().
+auto; progress; first 5 smt().
+rewrite fcardUI_indep 1:fsetI1 1:/# fcard1 /#.
+progress; proc.
+if; first auto.
+if; first auto.
+auto.
+call (_ : true); first auto.
+auto.
+proc.
+rcondf 1; first auto. rcondt 1; first auto.
+if.
+conseq (_ : ! BOrInstr.coll ==> _ : 0%r) => //.
+progress; by rewrite divr_ge0 le_fromint // ltzW powPos.
+hoare; auto.
+wp; rnd (mem BOrInstr.outs); skip; progress.
+by rewrite mu_output_distr_mem ler_wpmul2r 1:invr_ge0 le_fromint
+              1:ltzW 1:powPos.
+smt().
+progress; proc.
+rcondf 1; first auto. rcondt 1; first auto.
+wp; if.
+auto; progress; smt().
+auto; progress; first 5 smt().
+rewrite fcardUI_indep 1:fsetI1 1:/# fcard1 /#.
+progress; proc.
+if; first auto.
+if.
+wp; if.
+auto; progress; smt().
+auto; progress; first 6 smt().
+rewrite fcardUI_indep 1:fsetI1 1:/# fcard1 /#.
+call (_ : true); first auto.
+auto.
+qed.
+
+(* now we use the fundamental lemma (via byequiv) to prove: *)
+
+local lemma GSwitching_BOrInstr_BOrInjInstr_ub &m :
+  `|Pr[GSwitching(SWAdv, BOrInstr).main() @ &m : res] -
+    Pr[GSwitching(SWAdv, BOrInjInstr).main() @ &m : res]| <=
+  coll_bound.
+proof.
+have EquivColl :
+  Pr[GSwitching(SWAdv, BOrInstr).main() @ &m : BOrInstr.coll] =
+  Pr[GSwitching(SWAdv, BOrInjInstr).main() @ &m : BOrInjInstr.coll]
+  by byequiv (GSwitching_BOrInstr_BOrInjInstr_main) => //.
+have FundLem :
+  `|Pr[GSwitching(SWAdv, BOrInstr).main() @ &m : res] -
+    Pr[GSwitching(SWAdv, BOrInjInstr).main() @ &m : res]| <=
+    Pr[GSwitching(SWAdv, BOrInjInstr).main() @ &m : BOrInjInstr.coll].
+  byequiv (GSwitching_BOrInstr_BOrInjInstr_main) : BOrInstr.coll => //.
+apply
+  (ler_trans Pr[GSwitching(SWAdv, BOrInjInstr).main() @ &m : BOrInjInstr.coll]);
+  [apply FundLem |
+   rewrite -EquivColl (GSwitching_BOrInstr_collision &m)].
+qed.
+
+lemma Switching' &m :
+  `|Pr[GSwitching(SWAdv, BOr).main() @ &m : res] -
+    Pr[GSwitching(SWAdv, BOrInj).main() @ &m : res]| <=
+  coll_bound.
+proof.
+rewrite (GSwitching_BOr_BOrInstr &m)
+        -(GSwitching_BOrInjInstr_BOrInj &m)
+        (GSwitching_BOrInstr_BOrInjInstr_ub &m).
+qed.
+
+end section.
+
+lemma Switching (SWAdv <: SWADV{BOr, BOrInj}) &m :
+  (forall (O <: BOR{SWAdv}),
+   islossless O.adv_bhash => islossless O.adv_within_budget =>
+   islossless O.server_bhash => islossless O.client_bhash =>
+   islossless O.hash =>
+   islossless SWAdv(O).main) =>
+  `|Pr[GSwitching(SWAdv, BOr).main() @ &m : res] -
+    Pr[GSwitching(SWAdv, BOrInj).main() @ &m : res]| <=
+  coll_bound.
+proof.
+move => SWAdv_ll.
+apply (Switching' SWAdv SWAdv_ll &m).
+qed.
+
+end BudgetedRandomOracle.
+
+(************************* Removing Redundant Hashing *************************)
+
+(* This abstract theory provides a way of getting rid of redundant
+   hashing -- hashing where the resulting output value is
+   discarded. *)
+
+abstract theory RedundantHashing.
+
+(**************************** No Theory Parameters ****************************)
+
+(* Hashing Oracle *)
+
+module type HASHING = {
+  (* initialization *)
+
+  proc init() : unit
+
+  (* ordinary hashing *)
+
+  proc hash(inp : input) : output
+
+  (* redundant hashing - result ignored *)
+
+  proc rhash(inp : input) : unit
+}.
+
+(* non-optimized implementation of Hashing Oracle, parameterized by
+   random oracle O: redundant hashing calls O.hash *)
+
+module NonOptHashing(O : OR) : HASHING = {
+  proc init() : unit = {}
+
+  proc hash = O.hash
+
+  proc rhash(inp : input) : unit = {
+    O.hash(inp);
+  }
+}.
+
+(* optimized implementation of Hashing Oracle, parameterized by random
+   oracle: redundant hashing does nothing *)
+
+module OptHashing(O : OR) : HASHING = {
+  proc init() : unit = {}
+
+  proc hash = O.hash
+
+  proc rhash(inp : input) : unit = { }
+}.
+
+(* Hashing Adversary *)
+
+module type HASHING_ADV(H : HASHING) = {
+  proc * main() : bool {H.hash H.rhash}
+}.
+
+(* games based on the two implementations of hashing *)
+
+module GNonOptHashing(HashAdv : HASHING_ADV) = {
+  module H  = NonOptHashing(Or)
+  module HA = HashAdv(H)
+
+  proc main() : bool = {
+    var b : bool;
+    Or.init();
+    b <@ HA.main();
+    return b;
+  }
+}.
+
+module GOptHashing(HashAdv : HASHING_ADV) = {
+  module H  = OptHashing(Or)
+  module HA = HashAdv(H)
+
+  proc main() : bool = {
+    var b : bool;
+    Or.init();
+    b <@ HA.main();
+    return b;
+  }
+}.
+
+(* see end of section for main lemma *)
+
+section.
+
+(* our proof uses EasyCrypt's eager tactics, but the idea behind the
+   proof is simple: we can repeatedly postpone redundant hashing,
+   until the point when it is (non-redundantly) hashed or the hashing
+   adversary has already returned its boolean result (and so oracle
+   map equality is no longer of interest) *)
+
+declare module HashAdv : HASHING_ADV{Or}.
+
+(* extended hashing module interface
+
+   implementations aren't parameterized by random oracle
+
+   implementations include two global variables: the oracle's map,
+   plus a record of which inputs are *redundant* - i.e., have been
+   supplied to rhash but not to hash
+
+   some of the details of the two implementations that follow can be
+   best understood by reading the subsequent proofs *)
+
+module type HASHING' = {
+  (* initialization *)
+
+  proc init() : unit
+
+  (* ordinary hashing *)
+
+  proc hash(inp : input) : output
+
+  (* redundant hashing - result ignored *)
+
+  proc rhash(inp : input) : unit
+
+  (* rehash redundant inputs *)
+
+  proc rehash_red_inps() : unit
+
+  (* rehash redundant inputs, and then look up value of inp *)
+
+  proc rehash_red_inps_rslt(inp : input) : output
+
+  (* hash inp either before or after (depending on the implementation)
+     rehashing redundant inputs, returning value of inp (obtained
+     immediately after hashing it) *)
+
+  proc rehash_red_inps_addl(inp : input) : output
+}.
+
+(* so we can use iteration over inputs *)
+
+local clone include IterProc with type t <- input
+proof *.
+(* nothing to realize *)
+
+(* non-optimized implementation *)
+
+local module NOH' : HASHING, HASHING' = {
+  var mp : (input, output)fmap
+  var red_inps : input fset
+
+  proc init() : unit = {
+    mp <- map0; red_inps <- fset0;
+  }
+
+  proc hash(inp : input) : output = {
+    if (! mem (dom mp) inp) {
+      mp.[inp] <$ output_distr;
+    }
+    else {
+      (* if inp was redundant it's no longer so *)
+      red_inps <- red_inps `\` fset1 inp;
+    }
+    return oget mp.[inp];
+  }
+
+  proc rhash(inp : input) : unit = {
+    if (! mem (dom mp) inp) {
+      mp.[inp] <$ output_distr;
+      (* inp is redundant *)
+      red_inps <- red_inps `|` fset1 inp;
+    }
+  }
+
+  module I = {
+    proc f (inp : input) = {
+      mp.[inp] <$ output_distr;
+    }
+  }
+
+  proc rehash_red_inps() = {
+    Iter(I).iter(elems red_inps);
+  }
+
+  proc rehash_red_inps_rslt(inp : input) : output = {
+    var out : output;
+    rehash_red_inps();
+    out <- oget mp.[inp];
+    return out;
+  }
+
+  proc rehash_red_inps_addl(inp : input) : output = {
+    var out : output;
+    rehash_red_inps();
+    mp.[inp] <$ output_distr;  (* after *)
+    out <- oget mp.[inp];
+    return out;
+  }
+}.
+
+(* optimized implementation *)
+
+local module OH' : HASHING, HASHING' = {
+  var mp : (input, output)fmap
+  var red_inps : input fset
+
+  proc init() : unit = {
+    mp <- map0; red_inps <- fset0;
+  }
+
+  proc hash(inp : input) : output = {
+    (* the second disjunct is needed for the proof of
+       lemma eager_hash *)
+    if (! mem (dom mp) inp \/ mem red_inps inp) {
+      mp.[inp] <$ output_distr;
+      red_inps <- red_inps `\` fset1 inp;
+    }
+    return oget mp.[inp];
+  }
+
+  proc rhash(inp : input) : unit = {
+    if (! mem (dom mp) inp) {
+      red_inps <- red_inps `|` fset1 inp;
+    }
+  }
+
+  module I = {
+    proc f (inp : input) = {
+      mp.[inp] <$ output_distr;
+    }
+  }
+
+  proc rehash_red_inps() = {
+    Iter(I).iter(elems red_inps);
+  }
+
+  proc rehash_red_inps_rslt(inp : input) : output = {
+    var out : output;
+    rehash_red_inps();
+    out <- oget mp.[inp];
+    return out;
+  }
+
+  proc rehash_red_inps_addl(inp : input) : output = {
+    var out : output;
+    mp.[inp] <$ output_distr;  (* before *)
+    out <- oget mp.[inp];
+    rehash_red_inps();
+    return out;
+  }
+}.
+
+local lemma OH'_rehash_red_inps_ll :
+  islossless OH'.rehash_red_inps.
+proof.
+proc.
+call (iter_ll OH'.I _).
+proc; auto; progress; apply output_distr_ll.
+auto.
+qed.
+
+local lemma NOH'_rehash_red_inps_preserves_map mp':
+  phoare
+  [NOH'.rehash_red_inps :
+   NOH'.mp = mp' /\ NOH'.red_inps = fset0 ==>
+   NOH'.mp = mp'] = 1%r.
+proof.
+proc.
+inline*.
+seq 1 : (l = [] /\ NOH'.mp = mp'); first auto.
+auto; smt(elems_fset0).
+rcondf 1; auto.
+hoare; auto; smt(elems_fset0).
+trivial.
+qed.
+
+(* games based on the two extended hashing implementations,
+   where adversay only gets access to hash and rhash *)
+
+local module GNOH' = {
+  module HA = HashAdv(NOH')
+
+  proc main() : bool = {
+    var b : bool;
+    NOH'.init();
+    b <@ HA.main();
+    return b;
+  }
+}.
+
+local module GOH' = {
+  module HA = HashAdv(OH')
+
+  proc main() : bool = {
+    var b : bool;
+    OH'.init();
+    b <@ HA.main();
+    return b;
+  }
+}.
+
+(* moving from NonOptHashing to NOH' *)
+
+local lemma NonOptHashing_Or_NOH'_hash :
+  equiv
+  [NonOptHashing(Or).hash ~ NOH'.hash :
+   ={inp} /\ ={mp}(Or, NOH') /\ NOH'.red_inps{2} <= dom NOH'.mp{2} ==>
+   ={res} /\ ={mp}(Or, NOH') /\ NOH'.red_inps{2} <= dom NOH'.mp{2}].
+proof.
+proc.
+if => //.
+auto; smt(dom_set in_fsetU).
+auto; progress => x; rewrite in_fsetD1 /#.
+qed.
+
+local lemma NonOptHashing_Or_NOH'_rhash :
+  equiv
+  [NonOptHashing(Or).rhash ~ NOH'.rhash :
+   ={inp} /\ ={mp}(Or, NOH') /\ NOH'.red_inps{2} <= dom NOH'.mp{2} ==>
+   ={res} /\ ={mp}(Or, NOH') /\ NOH'.red_inps{2} <= dom NOH'.mp{2}].
+proof.
+proc; inline Or.hash; sp.
+if => //.
+auto; progress.
+rewrite dom_set subsetP; smt(in_fsetU1).
+qed.
+
+local lemma GNonOptHashing_GNOH'_main :
+  equiv
+  [GNonOptHashing(HashAdv).main ~ GNOH'.main :
+   true ==> ={res}].
+proof.
+proc; inline Or.init NOH'.init.
+seq 1 2 : (={mp}(Or, NOH') /\ NOH'.red_inps{2} <= dom NOH'.mp{2}).   
+auto; smt(dom0).
+call (_ : ={mp}(Or, NOH') /\ NOH'.red_inps{2} <= dom NOH'.mp{2}).
+apply NonOptHashing_Or_NOH'_hash.
+apply NonOptHashing_Or_NOH'_rhash.
+auto.
+qed.
+
+local lemma GNonOptHashing_GNOH' &m :
+  Pr[GNonOptHashing(HashAdv).main() @ &m : res] = Pr[GNOH'.main() @ &m : res].
+proof. by byequiv GNonOptHashing_GNOH'_main. qed.
+
+(* moving from OH' to OptHashing *)
+
+local lemma OH'_OptHashing_Or_hash :
+  equiv
+  [OH'.hash ~ OptHashing(Or).hash:
+   ={inp} /\ ={mp}(OH', Or) /\
+   (forall (inp' : input),
+    mem OH'.red_inps{1} inp' => ! mem (dom OH'.mp{1}) inp') ==>
+   ={res} /\ ={mp}(OH', Or) /\
+   (forall (inp' : input),
+    mem OH'.red_inps{1} inp' => ! mem (dom OH'.mp{1}) inp')].
+proof.
+proc.
+if.
+smt().
+auto; smt(dom_set in_fsetU1 in_fsetD1).
+auto.
+qed.
+
+local lemma OH'_OptHashing_Or_rhash :
+  equiv
+  [OH'.rhash ~ OptHashing(Or).rhash:
+   ={inp} /\ ={mp}(OH', Or) /\
+   (forall (inp' : input),
+    mem OH'.red_inps{1} inp' => ! mem (dom OH'.mp{1}) inp') ==>
+   ={res} /\ ={mp}(OH', Or) /\
+   (forall (inp' : input),
+    mem OH'.red_inps{1} inp' => ! mem (dom OH'.mp{1}) inp')].
+proof.
+proc; auto; smt(dom_set in_fsetU1 in_fsetD1).
+qed.
+
+local lemma GOH'_GOptHashing_main :
+  equiv
+  [GOH'.main ~ GOptHashing(HashAdv).main :
+   true ==> ={res}].
+proof.
+proc; inline OH'.init Or.init.
+seq 2 1 :
+  (={mp}(OH', Or) /\
+   (forall (inp' : input),
+    mem OH'.red_inps{1} inp' => ! mem (dom OH'.mp{1}) inp')).
+auto; smt(in_fset0).
+call
+  (_ :
+   ={mp}(OH', Or) /\
+   (forall (inp' : input),
+    mem OH'.red_inps{1} inp' => ! mem (dom OH'.mp{1}) inp')).
+apply OH'_OptHashing_Or_hash.
+apply OH'_OptHashing_Or_rhash.
+auto.
+qed.
+
+local lemma GOH'_GOptHashing &m :
+  Pr[GOH'.main() @ &m : res] = Pr[GOptHashing(HashAdv).main() @ &m : res].
+proof. by byequiv GOH'_GOptHashing_main. qed.
+
+(* middle step of sequence of games *)
+
+local lemma NOH'_rehash_red_inps_red_dom (inp' : input) :
+  hoare
+  [NOH'.rehash_red_inps :
+   mem NOH'.red_inps inp' ==> mem (dom NOH'.mp) inp'].
+proof.
+proc; inline*; sp.
+while (mem l inp' \/ mem (dom NOH'.mp) inp').
+auto; progress.
+rewrite domP in_fsetU1.
+smt(mem_ne_list_drop1).
+auto; smt(memE).
+qed.
+
+local lemma NOH'_rehash_red_inps_not_red_not_dom (inp' : input) :
+  hoare
+  [NOH'.rehash_red_inps :
+   ! mem NOH'.red_inps inp' /\ ! mem (dom NOH'.mp) inp' ==>
+   ! mem (dom NOH'.mp) inp'].
+proof.
+proc; inline*; sp.
+while (! mem l inp' /\ ! mem (dom NOH'.mp) inp').
+auto; smt(mem_ne_list_drop1 domP in_fsetU1).
+auto; smt(memE).
+qed.
+
+local lemma NOH'_rehash_red_inps_not_red_dom (inp' : input) :
+  hoare
+  [NOH'.rehash_red_inps :
+   ! mem NOH'.red_inps inp' /\ mem (dom NOH'.mp) inp' ==>
+   mem (dom NOH'.mp) inp'].
+proof.
+proc; inline*; sp.
+while (mem (dom NOH'.mp) inp').
+auto; smt(domP in_fsetU1).
+auto.
+qed.
+
+local lemma NOH'_OH'_rehash_red_inps_indep_pres
+            (inp : input, out : output) :
+  equiv
+  [NOH'.rehash_red_inps ~ OH'.rehash_red_inps :
+   ={mp, red_inps}(NOH', OH') /\ ! mem NOH'.red_inps{1} inp /\
+   oget NOH'.mp{1}.[inp] = out ==>
+   NOH'.mp{1} = OH'.mp{2} /\ oget NOH'.mp{1}.[inp] = out].
+proof.
+proc; inline*; sp.
+while
+  (={l} /\ NOH'.mp{1} = OH'.mp{2} /\
+   ! mem l{1} inp /\ oget NOH'.mp{1}.[inp] = out).
+auto; progress; smt(mem_ne_list_drop1 getP_neq).
+auto; smt(memE).
+qed.
+
+local lemma NOH'_OH'_rehash_red_inps_addl_not_red :
+  equiv
+  [NOH'.rehash_red_inps_addl ~ OH'.rehash_red_inps_addl :
+   ={inp} /\ ={mp, red_inps}(NOH', OH') /\
+   ! mem NOH'.red_inps{1} inp{1} ==>
+  ={res} /\ NOH'.mp{1} = OH'.mp{2}].
+proof.
+proc.
+alias{1} 2 with resu; swap{1} 2 -1.
+alias{2} 1 with resu.
+seq 1 1 : 
+  (={inp, resu} /\ ={mp, red_inps}(NOH', OH') /\
+   ! mem NOH'.red_inps{1} inp{1}); first auto.
+inline*; swap{2} 3 -2.
+seq 1 1 : 
+  (={inp, resu, l} /\ ={mp, red_inps}(NOH', OH') /\
+   ! mem l{1} inp{1}); first auto; smt(memE).
+wp; sp => /=; elim* => mp_R.
+while
+  (={inp, resu, l} /\ ! mem l{1} inp{1} /\
+   NOH'.red_inps{1} = OH'.red_inps{2} /\
+   NOH'.mp{1}.[inp{1} <- resu{1}] = OH'.mp{2}).
+auto; progress;
+  [smt(mem_ne_list_drop1) | smt(mem_ne_list_behead set_set)].
+auto; progress; smt(getP_eq).
+qed.
+
+(* lemma for using iters_perm *)
+
+local lemma iter_perm2 :
+  equiv
+  [Iter(NOH'.I).iter_12 ~ Iter(NOH'.I).iter_21 :
+   ={glob NOH'.I, t1, t2} ==> ={glob NOH'.I}].
+proof.
+proc => /=; inline*; sp.
+case (t1{1} = t2{1}); first auto.
+alias{1} 1 with x1; alias{1} 4 with x2; swap{1} 4 -3.
+alias{2} 1 with y1; alias{2} 4 with y2; swap{2} 4 -2.
+seq 2 2 :
+  (={t1, t2, glob NOH'.I} /\ inp{1} = t1{1} /\ inp{2} = t2{2} /\
+   t1{1} <> t2{2} /\ x1{1} = y2{2} /\ x2{1} = y1{2}); first auto.
+auto; progress; smt(set_set).
+qed.
+
+local lemma NOH'_rehash_red_inps_rslt_rehash_red_inps_addl :
+  equiv
+  [NOH'.rehash_red_inps_rslt ~ NOH'.rehash_red_inps_addl :
+   ={inp, NOH'.mp} /\ ! mem NOH'.red_inps{2} inp{1} /\
+   NOH'.red_inps{1} = NOH'.red_inps{2} `|` fset1 inp{1} ==>
+   ={res, NOH'.mp}].
+proof.
+proc; inline NOH'.rehash_red_inps; wp.
+conseq (_ : _ ==> ={NOH'.mp}) => //.
+transitivity{2}
+  { Iter(NOH'.I).iters(elems NOH'.red_inps, [inp]); }
+  (={inp, NOH'.mp} /\ ! mem NOH'.red_inps{2} inp{1} /\
+   NOH'.red_inps{1} = NOH'.red_inps{2} `|` fset1 inp{1} ==>
+   ={NOH'.mp})
+  (={inp, NOH'.mp, NOH'.red_inps} ==> ={NOH'.mp}) => //.
+progress; by exists NOH'.mp{2} NOH'.red_inps{2} inp{2}.
+symmetry.
+call (iters_perm NOH'.I iter_perm2).
+auto; progress.
+rewrite setUE elems_fset1.
+have {1}<- :
+  undup(elems NOH'.red_inps{1} ++ [inp{1}]) =
+  elems NOH'.red_inps{1} ++ [inp{1}]
+  by rewrite undup_id 1:cat_uniq 1:uniq_elems /= 1:-memE.
+rewrite FSet.oflistK.
+inline Iter(NOH'.I).iters; inline{1} (2) Iter(NOH'.I).iter.
+seq 4 1 : (={inp, NOH'.mp, NOH'.red_inps} /\ l{1} = [inp{1}]).
+sp; wp.
+call (_ : ={glob NOH'.I}); first sim.
+auto.
+rcondt{1} 1; first auto.
+inline{1} (1) NOH'.I.f.
+seq 3 1 : (={NOH'.mp} /\ l{1} = []); first auto.
+rcondf{1} 1; auto.
+qed.
+
+local lemma NOH'_rehash_red_inps_rslt_OH'_rehash_red_inps :
+  equiv
+  [NOH'.rehash_red_inps_rslt ~ OH'.rehash_red_inps :
+   ={mp, red_inps}(NOH', OH') ==> ={mp, red_inps}(NOH', OH')].
+proof.
+proc*; inline NOH'.rehash_red_inps_rslt; wp; sp.
+call (_ : ={mp, red_inps}(NOH', OH')); first sim.
+auto.
+qed.
+
+(* now we use the eager tactics: *)
+
+local lemma eager_hash :
+  eager
+  [NOH'.rehash_red_inps(); , NOH'.hash ~
+   OH'.hash, OH'.rehash_red_inps(); :
+   ={inp} /\ ={mp, red_inps}(NOH', OH') ==>
+   ={res} /\ ={mp, red_inps}(NOH', OH')].
+proof.
+eager proc.
+case (mem NOH'.red_inps{1} inp{1}).
+rcondt{2} 1; first auto; smt().
+rcondf{1} 2; first auto; call (NOH'_rehash_red_inps_red_dom inp{m}); auto.
+swap{1} 2 1; swap{2} 2 -1; wp 2 4; sp; elim* => red_inps_R.
+conseq
+  (_ :
+   ={inp} /\ NOH'.mp{1} = OH'.mp{2} /\ ! mem OH'.red_inps{2} inp{1} /\
+   NOH'.red_inps{1} = OH'.red_inps{2} `|` fset1 inp{1} ==>
+   ={result} /\ NOH'.mp{1} = OH'.mp{2}) => //.
+progress;
+  [smt(in_fsetD1) |
+   rewrite fsetP; smt(in_fsetU1 in_fsetU in_fsetD1 in_fset1)].
+transitivity{1}
+  { result <@ NOH'.rehash_red_inps_rslt(inp); }
+  (={inp, NOH'.mp, NOH'.red_inps} ==> ={result, NOH'.mp, NOH'.red_inps})
+  (={inp} /\ ={mp}(NOH', OH') /\ ! mem OH'.red_inps{2} inp{1} /\
+   NOH'.red_inps{1} = OH'.red_inps{2} `|` fset1 inp{1} ==>
+   ={result} /\ ={mp}(NOH', OH')) => //.
+progress; by exists OH'.mp{2} (OH'.red_inps{2} `|` fset1 inp{2}) inp{2}.
+inline NOH'.rehash_red_inps_rslt; sim.
+transitivity{1}
+  { result <@ NOH'.rehash_red_inps_addl(inp); }
+  (={inp, NOH'.mp} /\
+   ! mem NOH'.red_inps{2} inp{1} /\
+   NOH'.red_inps{1} = NOH'.red_inps{2} `|` fset1 inp{1} ==>
+   ={result} /\ ={mp}(NOH', NOH'))
+  (={inp} /\ ={mp, red_inps}(NOH', OH') /\
+   ! mem OH'.red_inps{2} inp{1} ==>
+   ={result} /\ ={mp}(NOH', OH')) => //.
+progress; by exists OH'.mp{2} OH'.red_inps{2} inp{2}.
+call NOH'_rehash_red_inps_rslt_rehash_red_inps_addl; auto.
+transitivity{2}
+  { result <@ OH'.rehash_red_inps_addl(inp); }
+  (={inp} /\ ={mp, red_inps}(NOH', OH') /\ ! mem NOH'.red_inps{1} inp{1} ==>
+   ={result} /\ ={mp}(NOH', OH'))
+  (={inp, OH'.mp, OH'.red_inps} ==> ={result, OH'.mp}) => //.
+progress; by exists OH'.mp{2} OH'.red_inps{2} inp{2}.
+call NOH'_OH'_rehash_red_inps_addl_not_red; auto.
+inline OH'.rehash_red_inps_addl; sim.
+(* second case: ! mem NOH'.red_inps{1} inp{1} *)
+case (! mem (dom NOH'.mp{1}) inp{1}).
+rcondt{2} 1; first auto; smt().
+rcondt{1} 2;
+  first auto; call (NOH'_rehash_red_inps_not_red_not_dom inp{m}); auto.
+swap{2} 2 -1.
+seq 0 1 : 
+  (={inp} /\ NOH'.mp{1} = OH'.mp{2} /\ NOH'.red_inps{1} = OH'.red_inps{2} /\
+   ! mem NOH'.red_inps{1} inp{1}).
+auto; progress.
+rewrite fsetP => inp; smt(in_fsetD1).
+transitivity{1}
+  { result <@ NOH'.rehash_red_inps_addl(inp); }
+  (={inp, NOH'.mp, NOH'.red_inps} ==> ={result, NOH'.mp, NOH'.red_inps})
+  (={inp} /\ ={mp, red_inps}(NOH', OH') /\ ! mem NOH'.red_inps{1} inp{1} ==>
+   ={result} /\ ={mp, red_inps}(NOH', OH')) => //.
+progress; by exists OH'.mp{2} OH'.red_inps{2} inp{2}.
+inline NOH'.rehash_red_inps_addl; sim.
+transitivity{2}
+  { result <@ OH'.rehash_red_inps_addl(inp); }
+  (={inp} /\ ={mp, red_inps}(NOH', OH') /\ ! mem NOH'.red_inps{1} inp{1} ==>
+   ={result} /\ ={mp, red_inps}(NOH', OH'))
+  (={inp, OH'.mp, OH'.red_inps} ==> ={result, OH'.mp, OH'.red_inps}) => //.
+progress; exists OH'.mp{2} OH'.red_inps{2} inp{2};
+progress; by exists OH'.mp{2} OH'.red_inps{2} inp{2}.
+call NOH'_OH'_rehash_red_inps_addl_not_red; auto.
+inline OH'.rehash_red_inps_addl; sim.
+(* second subcase: mem (dom NOH'.mp{1}) inp{1} *)
+rcondf{2} 1; first auto; smt().
+rcondf{1} 2;
+  first auto; call (NOH'_rehash_red_inps_not_red_dom inp{m}); auto.
+wp; sp.
+exists* inp{1}; elim* => inp'. exists* result{2}; elim* => out'.
+call (NOH'_OH'_rehash_red_inps_indep_pres inp' out').
+auto; progress; by rewrite minus1_not_mem.
+qed.
+
+local lemma eager_rhash :
+  eager
+  [NOH'.rehash_red_inps(); , NOH'.rhash ~
+   OH'.rhash, OH'.rehash_red_inps(); :
+   ={inp} /\ ={mp, red_inps}(NOH', OH') ==>
+   ={res} /\ ={mp, red_inps}(NOH', OH')].
+proof.
+eager proc.
+case (mem NOH'.red_inps{1} inp{1}).
+seq 0 1 :
+  (={inp} /\ NOH'.mp{1} = OH'.mp{2} /\ NOH'.red_inps{1} = OH'.red_inps{2} /\
+   mem NOH'.red_inps{1} inp{1}).
+if{2} => //.
+auto; progress.
+rewrite fsetUC subset_fsetU_id //.
+move => x; by rewrite in_fset1.
+rcondf{1} 2; auto.
+call{1} (NOH'_rehash_red_inps_red_dom inp{m}); auto.
+sim.
+case (mem (dom NOH'.mp{1}) inp{1}).
+rcondf{2} 1; first auto. rcondf{1} 2; auto.
+call (NOH'_rehash_red_inps_not_red_dom inp{m}); auto.
+sim.
+rcondt{2} 1; first auto. rcondt{1} 2; first auto.
+call (NOH'_rehash_red_inps_not_red_not_dom inp{m}); auto.
+wp 2 2; sp; elim* => red_inps_R.
+conseq
+  (_ :
+   ={inp} /\ ={mp}(NOH', OH') /\ ! mem NOH'.red_inps{1} inp{1} /\
+   NOH'.red_inps{1} `|` fset1 inp{1} = OH'.red_inps{2} ==>
+   NOH'.mp{1} = OH'.mp{2}) => //.
+alias{1} 2 with result.
+transitivity{1}
+  { result <@ NOH'.rehash_red_inps_addl(inp); }
+  (={inp, NOH'.mp, NOH'.red_inps} /\ ! mem NOH'.red_inps{1} inp{1} ==>
+   ={result, NOH'.mp})
+  (={inp} /\ ={mp}(NOH', OH') /\ ! mem NOH'.red_inps{1} inp{1} /\
+   NOH'.red_inps{1} `|` fset1 inp{1} = OH'.red_inps{2} ==>
+   ={mp}(NOH', OH')) => //.
+progress; by exists OH'.mp{2} NOH'.red_inps{1} inp{2}.
+inline NOH'.rehash_red_inps_addl; sp; wp.
+rnd.
+call (_ : ={NOH'.mp, NOH'.red_inps}); first sim.
+skip; progress; by rewrite getP_eq oget_some.
+transitivity{1}
+  { result <@ NOH'.rehash_red_inps_rslt(inp); }
+  (={inp, NOH'.mp} /\ ! mem NOH'.red_inps{1} inp{1} /\
+   NOH'.red_inps{1} `|` fset1 inp{1} = NOH'.red_inps{2} ==>
+   ={NOH'.mp})
+  (={inp} /\ ={mp, red_inps}(NOH', OH') ==> ={mp}(NOH', OH')) => //.
+progress; by exists OH'.mp{2} (NOH'.red_inps{1} `|` fset1 inp{2}) inp{2}.
+symmetry.
+call NOH'_rehash_red_inps_rslt_rehash_red_inps_addl; auto.
+call NOH'_rehash_red_inps_rslt_OH'_rehash_red_inps; auto.
+qed.
+
+(* now we use eager_hash and eager_rhash to prove: *)
+
+local lemma eager_hashing_adv :
+  eager
+  [NOH'.rehash_red_inps(); , HashAdv(NOH').main ~
+   HashAdv(OH').main, OH'.rehash_red_inps(); :
+   ={mp, red_inps}(NOH', OH') ==>
+   ={res} /\ ={mp, red_inps}(NOH', OH')].
+proof.
+eager proc
+  (base : NOH'.rehash_red_inps(); ~ OH'.rehash_red_inps(); :
+        ={mp, red_inps}(NOH', OH') ==> ={mp, red_inps}(NOH', OH'))
+  (={mp, red_inps}(NOH', OH')) => //.
+sim.
+apply eager_hash.
+sim.
+apply eager_rhash.
+sim.
+qed.
+
+(* finish the middle step: *)
+
+local lemma GNOH'_GOH' &m :
+  Pr[GNOH'.main() @ &m : res] = Pr[GOH'.main() @ &m : res].
+proof.
+byequiv => //; proc.
+seq 1 1 : (={mp, red_inps}(NOH', OH') /\ NOH'.red_inps{1} = fset0).
+inline*; auto.
+transitivity{1}
+ { NOH'.rehash_red_inps(); b <@ GNOH'.HA.main(); }
+ (={NOH'.mp, NOH'.red_inps} /\ NOH'.red_inps{1} = fset0 ==> ={b})
+ (={mp, red_inps}(NOH', OH') ==> ={b}) => //.
+progress; by exists OH'.mp{2} fset0.
+seq 0 1 : (={NOH'.mp, NOH'.red_inps}).
+exists* NOH'.mp{2}; elim* => mp'.
+call{2} (NOH'_rehash_red_inps_preserves_map mp'); auto.
+sim.
+transitivity{2}
+ { b <@ GOH'.HA.main(); OH'.rehash_red_inps(); }
+ (={mp, red_inps}(NOH', OH') ==> ={b})
+ (={OH'.mp, OH'.red_inps} ==> ={b}) => //.
+progress; by exists OH'.mp{2} OH'.red_inps{2}.
+eager call eager_hashing_adv; auto.
+call{1} OH'_rehash_red_inps_ll.
+sim.
+qed.
+
+(* putting it all together *)
+
+lemma GNonOptHashing_GOH' &m :
+  Pr[GNonOptHashing(HashAdv).main() @ &m : res] =
+  Pr[GOptHashing(HashAdv).main() @ &m : res].
+proof.
+by rewrite (GNonOptHashing_GNOH' &m)
+           (GNOH'_GOH' &m)
+           (GOH'_GOptHashing &m).
+qed.
+
+end section.
+
+lemma GNonOptHashing_GOptHashing (HashAdv <: HASHING_ADV{Or}) &m :
+    Pr[GNonOptHashing(HashAdv).main() @ &m : res] =
+    Pr[GOptHashing(HashAdv).main() @ &m : res].
+proof. apply (GNonOptHashing_GOH' HashAdv &m). qed.
+
+end RedundantHashing.
