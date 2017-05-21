@@ -74,7 +74,7 @@ EasyCrypt Theories
 
 Auxiliary Theories:
 
- * [`DistrAux.ec` - auxiliary lemmas on distributions](../blob/master/DistrAux.ec)
+ * [`DistrAux.ec` - auxiliary lemmas on distributions](../master/DistrAux.ec)
 
  * `FMapAux.ec` - auxiliary lemmas on finite maps
 
