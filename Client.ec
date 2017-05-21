@@ -1514,9 +1514,9 @@ split; first rewrite fcardUI_indep 1:fsetI1 1:not_mem_outs_out // fcard1 /#.
 by rewrite getP_eq.
 qed.
 
-(* server metric -- division of server's database processing into
-   inputs already seen and distinct elements not already seen in
-   part of database yet to be processed *)
+(* server metric -- division of server's database hashing into inputs
+   already hashed and distinct elements not already hashed in part of
+   database yet to be processed *)
 
 op serv_metric
    (sec : sec, i : int, inps : (elem * sec) fset, db : elem list) : int =
