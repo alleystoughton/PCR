@@ -48,8 +48,8 @@ limit the Adversary in different ways, depending upon the protocol
 party we are proving security against. For instance, we can limit the
 Adversary's use of the random oracle, or limit the number of distinct
 elements in the database it proposes. Because our proofs are
-information-theoretic - as opposed to relying on hardness assumptions
-- in each of our security theorems, the Simulator is existentially
+information-theoretic - as opposed to relying on hardness
+assumptions - in each of our security theorems, the Simulator is existentially
 quantified, so that the Simulator is part of the *proof*, instead of
 part of the *specification* of security.
 
