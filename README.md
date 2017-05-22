@@ -124,7 +124,7 @@ Authors
 
 These proofs were developed by [Alley Stoughton](http://alleystoughton.us)
 (alley.stoughton@icloud.com), based on a collaboration with Mayank
-Varia (mayank@mvaria.com).
+Varia (varia@bu.edu).
 
 We intend to maintain the PCR security proof as the EasyCrypt
 development continues.
