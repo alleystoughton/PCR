@@ -153,7 +153,7 @@ module GReal(Adv : ADV) : GAME = {
 
 (* Client's Simulator's interface to Ideal Functionality *)
 
-module type IDEAL_FUN = {
+module type SIF = {
   (* ask Ideal Functionality for next query along with its
      count; None means no more queries
 
@@ -169,13 +169,12 @@ module type IDEAL_FUN = {
 
 (* module type for Client's Simulator
 
-   parameterized by random oracle and interface to
-   Ideal Functionality
+   parameterized by random oracle and Simulator's interface to Ideal
+   Functionality, SIF
 
-   only client_loop may call procedures of the Ideal Functionality
-   interface *)
+   only client_loop may call procedures of SIF *)
 
-module type SIM(O : RO.OR, IF : IDEAL_FUN) = {
+module type SIM(O : RO.OR, SIF : SIF) = {
   (* initialization *)
 
   proc * init() : unit
@@ -186,7 +185,7 @@ module type SIM(O : RO.OR, IF : IDEAL_FUN) = {
 
   (* run the Client's query loop *)
 
-  proc client_loop() : unit {O.hash IF.get_qry_count IF.qry_done}
+  proc client_loop() : unit {O.hash SIF.get_qry_count SIF.qry_done}
 }.
 
 (* the "ideal" game
@@ -220,7 +219,7 @@ module GIdeal (Adv : ADV, Sim : SIM) : GAME = {
 
   (* Simulator's interface to Ideal Functionality *)
 
-  module IdealFun : IDEAL_FUN = {
+  module SIF : SIF = {
     proc get_qry_count(cv : client_view) : (elem * int) option = {
       var qry_opt : elem option;
       var qry_cnt_opt : (elem * int) option;
@@ -250,8 +249,8 @@ module GIdeal (Adv : ADV, Sim : SIM) : GAME = {
     }
   }
 
-  (* connect Simulator with Or and IdealFun *)
-  module S = Sim(Or, IdealFun)
+  (* connect Simulator with Or and SIF *)
+  module S = Sim(Or, SIF)
 
   proc main() : bool = {
     var db_opt : db option; var b : bool; var adv_within_budg : bool;
@@ -281,7 +280,7 @@ module GIdeal (Adv : ADV, Sim : SIM) : GAME = {
 
 (* Client's Simulator *)
 
-module (Sim : SIM) (O : RO.OR, IF : IDEAL_FUN) = {
+module (Sim : SIM) (O : RO.OR, SIF : SIF) = {
   var cv : client_view
   var sec : sec
 
@@ -299,7 +298,7 @@ module (Sim : SIM) (O : RO.OR, IF : IDEAL_FUN) = {
     var qry_cnt_opt : (elem * int) option;
     var not_done : bool <- true;
     while (not_done) {
-      qry_cnt_opt <@ IF.get_qry_count(cv);
+      qry_cnt_opt <@ SIF.get_qry_count(cv);
       if (qry_cnt_opt = None) {
         not_done <- false;
         cv <- cv ++ [cv_got_qry None];
@@ -309,7 +308,7 @@ module (Sim : SIM) (O : RO.OR, IF : IDEAL_FUN) = {
         cv <- cv ++ [cv_got_qry (Some qry)];
         tag <@ O.hash((qry, sec));
         cv <- cv ++ [cv_query_count(qry, tag, cnt)];
-        IF.qry_done(cv);
+        SIF.qry_done(cv);
       }
     }
   }
@@ -2919,8 +2918,8 @@ local lemma G7_GIdeal_client_loop :
    ={cv}(G7, Sim)].
 proof.
 proc.
-inline GIdeal(Adv, Sim).IdealFun.get_qry_count
-       GIdeal(Adv, Sim).IdealFun.qry_done
+inline GIdeal(Adv, Sim).SIF.get_qry_count
+       GIdeal(Adv, Sim).SIF.qry_done
        G7.tp_count_elem.
 while
   (={not_done} /\ ={glob RO.Or, glob CRO.COr, glob Adv} /\
