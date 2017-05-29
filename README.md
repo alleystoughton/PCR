@@ -141,8 +141,8 @@ It is a pleasure to acknowledge helpful discussions with Gilles
 Barthe, Ran Canetti, Robert Cunningham, François Dupressoir, Benjamin
 Grégoire, Jonathan Herzog, Aaron D. Jaggard, Jonathan Katz, Catherine
 Meadows, Adam Petcher, Emily Shen, Pierre-Yves Strub, Arkady
-Yerukhimovich and Santiago Zanella-Béguelin. Special thanks to
-Zanella-Béguelin for suggesting that security against the Third Party
+Yerukhimovich and Santiago Zanella Béguelin. Special thanks to
+Zanella Béguelin for suggesting that security against the Third Party
 could be strengthened were the Server to begin by randomly shuffling
 its database. Our theory for removing redundant hashing is based on a
 technique invented by Grégoire, but our implementation of this
