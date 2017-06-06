@@ -252,8 +252,8 @@ module GIdeal (Adv : ADV, Sim : SIM) : GAME = {
   proc main() : bool = {
     var db_opt : db option; var b : bool; var adv_within_budg : bool;
     var cv : client_view;
-    Or.init(); COr.init();
     qrys_ctr <- 0; S.init();
+    Or.init(); COr.init();
     cv <@ S.get_view(); db_opt <@ A.init_and_get_db(cv);
     if (db_opt <> None) {
       (* if too many elements in oget db_opt or Adversary has already
