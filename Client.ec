@@ -176,11 +176,11 @@ module type SIG = {
 module type SIM(O : RO.OR, SIG : SIG) = {
   (* initialization *)
 
-  proc * init() : unit {}
+  proc * init() : unit { (* no use of O, SIG *) }
 
   (* get current view *)
 
-  proc get_view() : client_view {}
+  proc get_view() : client_view { (* no use of O, SIG *) }
 
   (* run the Client's query loop *)
 
