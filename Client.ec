@@ -176,11 +176,11 @@ module type SIG = {
 module type SIM(O : RO.OR, SIG : SIG) = {
   (* initialization *)
 
-  proc * init() : unit
+  proc * init() : unit {}
 
   (* get current view *)
 
-  proc get_view() : client_view
+  proc get_view() : client_view {}
 
   (* run the Client's query loop *)
 
@@ -2958,8 +2958,7 @@ inline GIdeal(Adv, Sim).S.init
 seq 5 5 :
   (={glob RO.Or, glob CRO.COr} /\ ={sec, cv}(G7, Sim) /\
    ={qrys_ctr}(G7, GIdeal)).
-swap{2} 3 -2; swap{2} 4 -3; swap{1} 3 -1; swap{2} 5 -2.
-sim.
+swap{1} 3 -2; sim.
 seq 1 2 :
   (={db_opt, glob RO.Or, glob CRO.COr, glob Adv} /\
    ={sec, cv}(G7, Sim) /\ ={qrys_ctr}(G7, GIdeal)); first sim.
