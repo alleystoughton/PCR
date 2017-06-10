@@ -62,6 +62,11 @@ themselves have been proven using game sequences. To increase the
 efficiency and stability of proof checking, all uses of SMT solvers
 explicitly specify the EasyCrypt lemmas that the solvers may use.
 
+See the paper [Mechanizing the Proof of Adaptive,
+Information-theoretic Security of Cryptographic Protocols in the
+Random Oracle Model](http://alleystoughton.us/research/pcr.pdf)
+for more information.
+
 The repository contains the EasyCrypt proof scripts (files with
 extensions `.ec` (ordinary theories) and `.eca` (abstract theories))
 proving the security of PCR.
