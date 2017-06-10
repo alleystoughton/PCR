@@ -42,7 +42,7 @@ as a function of the protocol views that are supplied to it and its
 interactions with the random oracle. At the end of a game's execution,
 the Adversary is asked to make a boolean judgment, which is returned
 as the game's result. The security theorems upper-bound the absolute
-value of the difference between the probabilities that the real and
+values of the differences between the probabilities that the real and
 ideal games return true. For these upper bounds to be small, we must
 limit the Adversary in different ways, depending upon the protocol
 party we are proving security against. For instance, we can limit the
@@ -51,7 +51,7 @@ elements in the database it proposes. Because our proofs are
 information-theoretic - as opposed to relying on hardness
 assumptions - in each of our security theorems, the Simulator is existentially
 quantified, so that the Simulator is part of the *proof*, instead of
-part of the *specification* of security.
+part of the *specification*, of security.
 
 The EasyCrypt proofs are structured using the sequence of games
 approach, in which a protocol party's real and ideal games are
@@ -135,7 +135,8 @@ Acknowledgments
 The reported work was partially completed while the authors were
 employed at MIT Lincoln Laboratory, funded by the Intelligence
 Advanced Research Projects Activity under Air Force Contract
-FA8721-05-C-0002.
+FA8721-05-C-0002. Varia's contributions were subsequently supported
+by the National Science Foundation under Grant No. 1414119.
 
 It is a pleasure to acknowledge helpful discussions with Gilles
 Barthe, Ran Canetti, Robert Cunningham, François Dupressoir, Benjamin

@@ -84,11 +84,11 @@ module GReal(Adv : ADV) : GAME = {
 module type SIM(O : RO.OR) = {
   (* initialization *)
 
-  proc * init() : unit { }
+  proc * init() : unit { (* no use of O *) }
 
   (* get current view *)
 
-  proc get_view() : server_view { }
+  proc get_view() : server_view { (* no use of O *) }
 
   (* rest of processing *)
 
