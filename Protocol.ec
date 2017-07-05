@@ -48,7 +48,7 @@ clone Word as Sec with
   op n <- sec_len,                    (* word length *)
   op dchar <- false                   (* default alphabet element *)
 proof
-  Alphabet.enum_spec by smt(),
+  Alphabet.enum_spec by case,
   ge0_n by apply sec_len_ge0
   (* the remaining axioms are unprovable specifications *)
 rename [op] "mkword" as "bits2w"   (* bool list -> Word.word *)
@@ -84,7 +84,7 @@ clone Word as Tag with
   op n <- tag_len,
   op dchar <- false
 proof
-  Alphabet.enum_spec by smt(),
+  Alphabet.enum_spec by case,
   ge0_n by apply tag_len_ge0
   (* the remaining axioms are unprovable specifications *)
 rename [op] "mkword" as "bits2w"
