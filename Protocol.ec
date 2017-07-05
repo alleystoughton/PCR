@@ -60,14 +60,16 @@ op zeros_sec : sec = Sec.bits2w [].  (* the all zero secret *)
 
 (* uniform distribution on secrets *)
 
-op sec_distr : sec distr = Sec.dword.
+op sec_distr : sec distr = Sec.DWord.dunifin.
 
 lemma mu1_sec_distr (sec : sec) :
   mu1 sec_distr sec = 1%r / (2 ^ sec_len)%r.
-proof. apply Sec.DWord.dword1E. qed.
+proof.
+by rewrite -Sec.word_card Sec.DWord.dunifin1E.
+qed.
 
 lemma sec_distr_ll : is_lossless sec_distr.
-proof. apply Sec.DWord.dword_ll. qed.
+proof. apply Sec.DWord.dunifin_ll. qed.
 
 (* hash tags are bitstrings of length tag_len *)
 
@@ -94,14 +96,16 @@ op zeros_tag : tag = Tag.bits2w [].  (* the all zero tag *)
 
 (* uniform distribution on tags *)
 
-op tag_distr : tag distr = Tag.dword.
+op tag_distr : tag distr = Tag.DWord.dunifin.
 
 lemma mu1_tag_distr (tag : tag) :
   mu1 tag_distr tag = 1%r / (2 ^ tag_len)%r.
-proof. apply Tag.DWord.dword1E. qed.
+proof.
+by rewrite -Tag.word_card Tag.DWord.dunifin1E.
+qed.
 
 lemma tag_distr_ll : is_lossless tag_distr.
-proof. apply Tag.DWord.dword_ll. qed.
+proof. apply Tag.DWord.dunifin_ll. qed.
 
 (*************************** Elements Counts Maps *****************************)
 
