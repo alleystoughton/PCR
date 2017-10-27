@@ -55,7 +55,7 @@ type output.  (* type of oracle outputs *)
 
 op output_default : output.  (* default output *)
 
-(* uniform distribution on outputs *)
+(* uniform, full and lossless distribution on outputs *)
 
 op output_distr : output distr.
 

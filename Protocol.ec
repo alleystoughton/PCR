@@ -58,7 +58,7 @@ type sec = Sec.word.  (* type of secrets *)
 
 op zeros_sec : sec = Sec.bits2w [].  (* the all zero secret *)
 
-(* uniform distribution on secrets *)
+(* uniform, full and lossless distribution on secrets *)
 
 op sec_distr : sec distr = Sec.DWord.dunifin.
 
@@ -94,7 +94,7 @@ type tag = Tag.word.  (* type of tags *)
 
 op zeros_tag : tag = Tag.bits2w [].  (* the all zero tag *)
 
-(* uniform distribution on tags *)
+(* uniform, full and lossless distribution on tags *)
 
 op tag_distr : tag distr = Tag.DWord.dunifin.
 
