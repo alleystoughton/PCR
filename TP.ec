@@ -685,7 +685,7 @@ local lemma G1_SRO_SecOrDep_hash_elem_hash (xs : (elem * sec)fset) :
    ={elem} /\
    G1.sec{1} = SRO.SecOrDep.secret{2} /\ ={mp}(RO.Or, SRO.SecOrDep) /\
    xs = dom RO.Or.mp{1} ==>
-   ={res} /\ ={mp}(RO.Or, SRO.SecOrDep) /\ xs <= dom RO.Or.mp{1}].
+   ={res} /\ ={mp}(RO.Or, SRO.SecOrDep) /\ xs \subset dom RO.Or.mp{1}].
 proof.
 proc.
 inline RO.Or.hash.
@@ -704,16 +704,16 @@ local lemma LRO_LOr_RO_Or_SecOrToOr_SRO_SecOrDep_hash :
    ={inp} /\
    G1.sec{1} = SRO.SecOrDep.secret{2} /\
    ={mp}(RO.Or, SRO.SecOrDep) /\ ={inps, ctr}(LRO.LOr, SRO.SecOrDep) /\
-   LRO.LOr.inps{1} <= dom RO.Or.mp{1} ==>
+   LRO.LOr.inps{1} \subset dom RO.Or.mp{1} ==>
    ={res} /\
    ={mp}(RO.Or, SRO.SecOrDep) /\ ={inps, ctr}(LRO.LOr, SRO.SecOrDep) /\
-   LRO.LOr.inps{1} <= dom RO.Or.mp{1}].
+   LRO.LOr.inps{1} \subset dom RO.Or.mp{1}].
 proof.
 proc; inline SRO.SecOrDep.lhash.
 seq 0 1 :
   (={inp} /\ inp0{2} = inp{2} /\ G1.sec{1} = SRO.SecOrDep.secret{2} /\
    ={mp}(RO.Or, SRO.SecOrDep) /\ ={inps, ctr}(LRO.LOr, SRO.SecOrDep) /\
-   LRO.LOr.inps{1} <= dom RO.Or.mp{1}); first auto.
+   LRO.LOr.inps{1} \subset dom RO.Or.mp{1}); first auto.
 if => //.
 inline RO.Or.hash; rcondf {1} 2.
 auto; progress; smt().
@@ -745,13 +745,13 @@ seq 6 9 :
   (G1.tpv{1} = SecAdv.tpv{2} /\ G1.sec{1} = SRO.SecOrDep.secret{2} /\
    G1.qrys_ctr{1} = SecAdv.qrys_ctr{2} /\ ={mp}(RO.Or, SRO.SecOrDep) /\
    ={ctr, inps}(LRO.LOr, SRO.SecOrDep) /\
-   LRO.LOr.inps{1} <= dom RO.Or.mp{1}).
+   LRO.LOr.inps{1} \subset dom RO.Or.mp{1}).
 swap{1} 5 -4; auto; progress; rewrite sub0set.
 sim
   (: G1.sec{1} = SRO.SecOrDep.secret{2} /\
      ={mp}(RO.Or, SRO.SecOrDep) /\
      ={ctr, inps}(LRO.LOr, SRO.SecOrDep)) /
-  (LRO.LOr.inps{1} <= dom RO.Or.mp{1}) :
+  (LRO.LOr.inps{1} \subset dom RO.Or.mp{1}) :
   (={b}).
 exists* RO.Or.mp{1}; elim*; move => mp_L.
 conseq (G1_SRO_SecOrDep_hash_elem_hash (dom mp_L)); smt().

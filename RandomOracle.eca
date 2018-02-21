@@ -1,4 +1,4 @@
-(* RandomOracle.eca *)
+(* RandomOracle.eca *) prover ["Z3"].
 
 (* Random Oracle *)
 
@@ -860,7 +860,8 @@ call
   (_ :
    ={mp, adv_inps, adv_ctr, adv_over, serv_inps, serv_ctr,
      serv_over, clnt_ctr, clnt_over}(BOr, BOrInstr) /\
-   BOr.adv_inps{1} <= dom BOr.mp{1} /\ BOr.serv_inps{1} <= dom BOr.mp{1}).
+   BOr.adv_inps{1} \subset dom BOr.mp{1} /\
+   BOr.serv_inps{1} \subset dom BOr.mp{1}).
 proc.
 case (mem BOr.adv_inps{1} inp{1}).
 rcondf{1} 1; first auto. rcondt{2} 1; first auto.
@@ -1619,20 +1620,20 @@ local module GOH' = {
 local lemma NonOptHashing_Or_NOH'_hash :
   equiv
   [NonOptHashing(Or).hash ~ NOH'.hash :
-   ={inp} /\ ={mp}(Or, NOH') /\ NOH'.red_inps{2} <= dom NOH'.mp{2} ==>
-   ={res} /\ ={mp}(Or, NOH') /\ NOH'.red_inps{2} <= dom NOH'.mp{2}].
+   ={inp} /\ ={mp}(Or, NOH') /\ NOH'.red_inps{2} \subset dom NOH'.mp{2} ==>
+   ={res} /\ ={mp}(Or, NOH') /\ NOH'.red_inps{2} \subset dom NOH'.mp{2}].
 proof.
 proc.
 if => //.
-auto; smt(dom_set in_fsetU).
+auto; progress; smt(dom_set in_fsetU).
 auto; progress => x; rewrite in_fsetD1 /#.
 qed.
 
 local lemma NonOptHashing_Or_NOH'_rhash :
   equiv
   [NonOptHashing(Or).rhash ~ NOH'.rhash :
-   ={inp} /\ ={mp}(Or, NOH') /\ NOH'.red_inps{2} <= dom NOH'.mp{2} ==>
-   ={res} /\ ={mp}(Or, NOH') /\ NOH'.red_inps{2} <= dom NOH'.mp{2}].
+   ={inp} /\ ={mp}(Or, NOH') /\ NOH'.red_inps{2} \subset dom NOH'.mp{2} ==>
+   ={res} /\ ={mp}(Or, NOH') /\ NOH'.red_inps{2} \subset dom NOH'.mp{2}].
 proof.
 proc; inline Or.hash; sp.
 if => //.
@@ -1646,9 +1647,9 @@ local lemma GNonOptHashing_GNOH'_main :
    true ==> ={res}].
 proof.
 proc; inline Or.init NOH'.init.
-seq 1 2 : (={mp}(Or, NOH') /\ NOH'.red_inps{2} <= dom NOH'.mp{2}).   
+seq 1 2 : (={mp}(Or, NOH') /\ NOH'.red_inps{2} \subset dom NOH'.mp{2}).   
 auto; smt(dom0).
-call (_ : ={mp}(Or, NOH') /\ NOH'.red_inps{2} <= dom NOH'.mp{2}).
+call (_ : ={mp}(Or, NOH') /\ NOH'.red_inps{2} \subset dom NOH'.mp{2}).
 apply NonOptHashing_Or_NOH'_hash.
 apply NonOptHashing_Or_NOH'_rhash.
 auto.

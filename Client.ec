@@ -1342,14 +1342,14 @@ local lemma BOrInj_server_bhash_counting_mem_inps
    BRO.BOrInj.adv_ctr{1} <= adv_budget /\
    BRO.BOrInj.serv_ctr{1} <= db_uniqs_max /\
    BRO.BOrInj.clnt_ctr{1} = 0 /\
-   BRO.BOrInj.serv_inps{1} <= dom BRO.BOrInj.mp{1} /\
+   BRO.BOrInj.serv_inps{1} \subset dom BRO.BOrInj.mp{1} /\
    mem serv_inps' (elem, sec) /\ ! BRO.BOrInj.serv_over{1} /\
    inj BRO.BOrInj.mp{1} BRO.BOrInj.outs{1} /\
    counting sec hdb BRO.BOrInj.mp{1} elems_cnts /\
    card BRO.BOrInj.outs{1} <=
    BRO.BOrInj.adv_ctr{1} + BRO.BOrInj.serv_ctr{1} ==>
    ={res, glob BRO.BOrInj} /\ BRO.BOrInj.serv_ctr{1} <= db_uniqs_max /\
-   BRO.BOrInj.serv_inps{1} <= dom BRO.BOrInj.mp{1} /\
+   BRO.BOrInj.serv_inps{1} \subset dom BRO.BOrInj.mp{1} /\
    ! BRO.BOrInj.serv_over{1} /\
    inj BRO.BOrInj.mp{1} BRO.BOrInj.outs{1} /\
    counting sec hdb BRO.BOrInj.mp{1} elems_cnts /\
@@ -1377,14 +1377,14 @@ local lemma BOrInj_server_bhash_counting_not_mem_inps
    BRO.BOrInj.adv_ctr{1} <= adv_budget /\
    BRO.BOrInj.serv_ctr{1} < db_uniqs_max /\
    BRO.BOrInj.clnt_ctr{1} = 0 /\
-   BRO.BOrInj.serv_inps{1} <= dom BRO.BOrInj.mp{1} /\
+   BRO.BOrInj.serv_inps{1} \subset dom BRO.BOrInj.mp{1} /\
    ! mem serv_inps' (elem, sec) /\ ! BRO.BOrInj.serv_over{1} /\
    inj BRO.BOrInj.mp{1} BRO.BOrInj.outs{1} /\
    counting sec hdb BRO.BOrInj.mp{1} elems_cnts /\
    card BRO.BOrInj.outs{1} <=
    BRO.BOrInj.adv_ctr{1} + BRO.BOrInj.serv_ctr{1} ==>
    ={res, glob BRO.BOrInj} /\ BRO.BOrInj.serv_ctr{1} <= db_uniqs_max /\
-   BRO.BOrInj.serv_inps{1} <= dom BRO.BOrInj.mp{1} /\
+   BRO.BOrInj.serv_inps{1} \subset dom BRO.BOrInj.mp{1} /\
    ! BRO.BOrInj.serv_over{1} /\
    inj BRO.BOrInj.mp{1} BRO.BOrInj.outs{1} /\
    counting sec hdb BRO.BOrInj.mp{1} elems_cnts /\
@@ -1409,7 +1409,7 @@ seq 1 1 :
    BRO.BOrInj.adv_ctr{1} <= adv_budget /\
    BRO.BOrInj.serv_ctr{1} < db_uniqs_max /\
    BRO.BOrInj.clnt_ctr{1} = 0 /\
-   BRO.BOrInj.serv_inps{1} <= dom BRO.BOrInj.mp{1} /\
+   BRO.BOrInj.serv_inps{1} \subset dom BRO.BOrInj.mp{1} /\
    ! mem BRO.BOrInj.serv_inps{1} (elem, sec) /\ ! BRO.BOrInj.serv_over{1} /\
    inj BRO.BOrInj.mp{1} BRO.BOrInj.outs{1} /\
    counting sec hdb BRO.BOrInj.mp{1} elems_cnts /\
@@ -1645,7 +1645,7 @@ while
    BRO.BOrInj.adv_ctr{1} <= adv_budget /\
    BRO.BOrInj.clnt_ctr{1} = 0 /\
    BRO.BOrInj.serv_ctr{1} = card BRO.BOrInj.serv_inps{1} /\
-   BRO.BOrInj.serv_inps{1} <= dom BRO.BOrInj.mp{1} /\
+   BRO.BOrInj.serv_inps{1} \subset dom BRO.BOrInj.mp{1} /\
    serv_metric G2.sec{1} i{1} BRO.BOrInj.serv_inps{1} db{1} <= db_uniqs_max /\
    ! BRO.BOrInj.serv_over{1} /\
    inj BRO.BOrInj.mp{1} BRO.BOrInj.outs{1} /\
