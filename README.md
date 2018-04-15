@@ -82,7 +82,7 @@ Auxiliary Theories:
 
  * [`DistrAux.ec` - auxiliary lemmas on distributions](../master/DistrAux.ec)
 
- * [`FMapAux.ec` - auxiliary lemmas on finite maps](../master/FMapAux.ec)
+ * [`MapAux.ec` - auxiliary lemmas on maps](../master/MapAux.ec)
 
  * [`FSetAux.ec` - auxiliary lemmas on finite sets](../master/FSetAux.ec)
 
