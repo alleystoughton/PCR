@@ -1,4 +1,4 @@
-(* RandomOracle.eca *) prover ["Z3"].
+(* RandomOracle.eca *)
 
 (* Random Oracle *)
 
@@ -26,7 +26,7 @@
 
 (***************************** Standard Theories ******************************)
 
-require import AllCore Distr Mu_mem Dexcepted FSet NewFMap List
+require import AllCore Distr Mu_mem Dexcepted FSet SmtMap List
                FelTactic.
 require import StdBigop. import Bigreal BRA.
 require import StdOrder. import RealOrder.
@@ -35,7 +35,7 @@ require IterProc.
 
 (**************************** Auxiliary Theories ******************************)
 
-require import DistrAux ListAux FSetAux.
+require import DistrAux ListAux FSetAux MapAux.
 
 (**************************** Supporting Theories *****************************)
 
@@ -77,14 +77,14 @@ module type OR = {
 (* random oracle *)
 
 module Or : OR = {
-  var mp : (input, output)fmap
+  var mp : (input, output) fmap
 
   proc init() : unit = {
-    mp <- map0;
+    mp <- empty;
   }
 
   proc hash(inp : input) : output = {
-    if (! mem (dom mp) inp) {
+    if (! dom mp inp) {
       mp.[inp] <$ output_distr;
     }
     return oget mp.[inp];
@@ -374,14 +374,14 @@ module BOr : BOR = {
   var clnt_over : bool  (* is Client over budget? *)
 
   proc init() : unit = {
-    mp <- map0;
+    mp <- empty;
     adv_inps <- fset0; adv_ctr <- 0; adv_over <- false;
     serv_inps <- fset0; serv_ctr <- 0; serv_over <- false;
     clnt_ctr <- 0; clnt_over <- false;
   }
 
   proc hash(inp : input) : output = {
-    if (! mem (dom mp) inp) {
+    if (! dom mp inp) {
       mp.[inp] <$ output_distr;
     }
     return oget mp.[inp];
@@ -464,14 +464,14 @@ module BOrInj : BOR = {
   var clnt_over : bool  (* is Client over budget? *)
 
   proc init() : unit = {
-    mp <- map0; outs <- fset0;
+    mp <- empty; outs <- fset0;
     adv_inps <- fset0; adv_ctr <- 0; adv_over <- false;
     serv_inps <- fset0; serv_ctr <- 0; serv_over <- false;
     clnt_ctr <- 0; clnt_over <- false;
   }
 
   proc hash(inp : input) : output = {
-    if (! mem (dom mp) inp) {
+    if (! dom mp inp) {
       mp.[inp] <$ output_distr;
     }
     return oget mp.[inp];
@@ -484,7 +484,7 @@ module BOrInj : BOR = {
       out <- oget mp.[inp];
     }
     elif (adv_ctr < adv_budget) {
-      if (mem (dom mp) inp) {
+      if (dom mp inp) {
         out <- oget mp.[inp];
       }
       else {
@@ -516,7 +516,7 @@ module BOrInj : BOR = {
       out <- oget mp.[inp];
     }
     elif (serv_ctr < serv_budget) {
-      if (mem (dom mp) inp) {
+      if (dom mp inp) {
         out <- oget mp.[inp];
       }
       else {
@@ -541,7 +541,7 @@ module BOrInj : BOR = {
     var out : output;
 
     if (clnt_ctr < clnt_budget) {
-      if (mem (dom mp) inp) {
+      if (dom mp inp) {
         out <- oget mp.[inp];
       }
       else {
@@ -621,14 +621,14 @@ local module BOrInstr : BOR = {
   var clnt_over : bool
 
   proc init() : unit = {
-    mp <- map0; outs <- fset0; coll <- false;
+    mp <- empty; outs <- fset0; coll <- false;
     adv_inps <- fset0; adv_ctr <- 0; adv_over <- false;
     serv_inps <- fset0; serv_ctr <- 0; serv_over <- false;
     clnt_ctr <- 0; clnt_over <- false;
   }
 
   proc hash(inp : input) : output = {
-    if (! mem (dom mp) inp) {
+    if (! dom mp inp) {
       mp.[inp] <$ output_distr;
     }
     return oget mp.[inp];
@@ -641,7 +641,7 @@ local module BOrInstr : BOR = {
       out <- oget mp.[inp];
     }
     elif (adv_ctr < adv_budget) {
-      if (mem (dom mp) inp) {
+      if (dom mp inp) {
         out <- oget mp.[inp];
       }
       else {
@@ -675,7 +675,7 @@ local module BOrInstr : BOR = {
       out <- oget mp.[inp];
     }
     elif (serv_ctr < serv_budget) {
-      if (mem (dom mp) inp) {
+      if (dom mp inp) {
         out <- oget mp.[inp];
       }
       else {
@@ -702,7 +702,7 @@ local module BOrInstr : BOR = {
     var out : output;
 
     if (clnt_ctr < clnt_budget) {
-      if (mem (dom mp) inp) {
+      if (dom mp inp) {
         out <- oget mp.[inp];
       }
       else {
@@ -744,14 +744,14 @@ local module BOrInjInstr : BOR = {
   var clnt_over : bool
 
   proc init() : unit = {
-    mp <- map0; outs <- fset0; coll <- false;
+    mp <- empty; outs <- fset0; coll <- false;
     adv_inps <- fset0; adv_ctr <- 0; adv_over <- false;
     serv_inps <- fset0; serv_ctr <- 0; serv_over <- false;
     clnt_ctr <- 0; clnt_over <- false;
   }
 
   proc hash(inp : input) : output = {
-    if (! mem (dom mp) inp) {
+    if (! dom mp inp) {
       mp.[inp] <$ output_distr;
     }
     return oget mp.[inp];
@@ -764,7 +764,7 @@ local module BOrInjInstr : BOR = {
       out <- oget mp.[inp];
     }
     elif (adv_ctr < adv_budget) {
-      if (mem (dom mp) inp) {
+      if (dom mp inp) {
         out <- oget mp.[inp];
       }
       else {
@@ -797,7 +797,7 @@ local module BOrInjInstr : BOR = {
       out <- oget mp.[inp];
     }
     elif (serv_ctr < serv_budget) {
-      if (mem (dom mp) inp) {
+      if (dom mp inp) {
         out <- oget mp.[inp];
       }
       else {
@@ -823,7 +823,7 @@ local module BOrInjInstr : BOR = {
     var out : output;
 
     if (clnt_ctr < clnt_budget) {
-      if (mem (dom mp) inp) {
+      if (dom mp inp) {
         out <- oget mp.[inp];
       }
       else {
@@ -855,67 +855,71 @@ seq 1 1 :
   (={mp, adv_inps, adv_ctr, adv_over, serv_inps, serv_ctr,
      serv_over, clnt_ctr, clnt_over}(BOr, BOrInstr) /\
    BOr.adv_inps{1} = fset0 /\ BOr.serv_inps{1} = fset0 /\
-   BOr.mp{1} = map0); inline*; auto.
+   BOr.mp{1} = empty); inline*; auto.
 call
   (_ :
    ={mp, adv_inps, adv_ctr, adv_over, serv_inps, serv_ctr,
      serv_over, clnt_ctr, clnt_over}(BOr, BOrInstr) /\
-   BOr.adv_inps{1} \subset dom BOr.mp{1} /\
-   BOr.serv_inps{1} \subset dom BOr.mp{1}).
+   BOr.adv_inps{1} \subset fdom BOr.mp{1} /\
+   BOr.serv_inps{1} \subset fdom BOr.mp{1}).
 proc.
 case (mem BOr.adv_inps{1} inp{1}).
 rcondf{1} 1; first auto. rcondt{2} 1; first auto.
 inline*; sp; wp.
-rcondf{1} 1; auto; smt().
+rcondf{1} 1; auto; progress; smt(mem_fdom).
 rcondt{1} 1; first auto. rcondf{2} 1; first auto.
 if => //.
 inline{1} BOr.hash; swap{1} [1..2] 3; wp; sp.
-case (mem (dom BOr.mp{1}) inp0{1}).
+case (dom BOr.mp{1} inp0{1}).
 rcondf{1} 1; first auto. rcondt{2} 1; first auto.
-auto; progress; move => inp; smt(in_fsetU in_fset1).
+auto; progress; move => inp; smt(in_fsetU in_fset1 mem_fdom).
 rcondt{1} 1; first auto. rcondf{2} 1; first auto.
 auto; progress;
-  [by rewrite getP_eq oget_some |
-   move => inp'; smt(domP in_fsetU) |
-   move => inp'; smt(domP in_fsetU)].
+  [by rewrite get_set_sameE oget_some |
+   move => inp'; rewrite fdom_set 2!in_fsetU in_fset1; smt(subsetP) |
+   move => inp'; rewrite fdom_set in_fsetU in_fset1; smt(subsetP)].
 inline*; wp; sp; if => //.
-auto; progress; move => inp; smt(domP in_fsetU).
+auto; progress; move => inp;
+  rewrite fdom_set in_fsetU in_fset1; smt(subsetP).
 proc; auto.
 proc.
 case (mem BOr.serv_inps{1} inp{1}).
 rcondf{1} 1; first auto. rcondt{2} 1; first auto.
 inline*; sp; wp.
-rcondf{1} 1; auto; smt().
+rcondf{1} 1; auto; progress; smt(mem_fdom).
 rcondt{1} 1; first auto. rcondf{2} 1; first auto.
 if => //.
 inline{1} BOr.hash; swap{1} [1..2] 3; wp; sp.
-case (mem (dom BOr.mp{1}) inp0{1}).
+case (dom BOr.mp{1} inp0{1}).
 rcondf{1} 1; first auto. rcondt{2} 1; first auto.
-auto; progress; move => inp; smt(in_fsetU in_fset1).
+auto; progress; move => inp; smt(in_fsetU in_fset1 mem_fdom).
 rcondt{1} 1; first auto. rcondf{2} 1; first auto.
-auto; progress;
-  [by rewrite getP_eq oget_some |
-   move => inp'; smt(domP in_fsetU) |
-   move => inp'; smt(domP in_fsetU)].
+auto; progress.
+by rewrite get_set_sameE oget_some.
+move => inp'; rewrite fdom_set in_fsetU in_fset1; smt(subsetP).
+move => inp'; rewrite fdom_set 2!in_fsetU in_fset1; smt(subsetP).
 inline*; wp; sp; if => //.
-auto; progress; move => inp; smt(domP in_fsetU).
+auto; progress; move => inp;
+  rewrite fdom_set in_fsetU in_fset1; smt(subsetP).
 proc.
 if => //.
 inline{1} BOr.hash; swap{1} 1 3; wp; sp.
-case (mem (dom BOr.mp{1}) inp0{1}).
+case (dom BOr.mp{1} inp0{1}).
 rcondf{1} 1; first auto. rcondt{2} 1; first auto.
-auto; progress; by rewrite set_eq 1:get_oget.
+auto; progress; by rewrite set_same.
 rcondt{1} 1; first auto. rcondf{2} 1; first auto.
 auto; progress;
-  [by rewrite getP_eq oget_some |
-   move => inp'; smt(domP in_fsetU) |
-   move => inp'; smt(domP in_fsetU)].
+  [by rewrite get_set_sameE oget_some |
+   move => inp'; rewrite fdom_set in_fsetU in_fset1; smt(subsetP) |
+   move => inp'; rewrite fdom_set in_fsetU in_fset1; smt(subsetP)].
 inline*; wp; sp; if => //.
-auto; progress; move => inp; smt(domP in_fsetU).
+auto; progress; move => inp;
+  rewrite fdom_set in_fsetU in_fset1; smt(subsetP).
 proc.
 if => //.
-auto; progress; move => inp; smt(domP in_fsetU).
-auto; progress; by rewrite dom0.
+auto; progress; move => inp;
+  rewrite fdom_set in_fsetU in_fset1; smt(subsetP).
+auto; progress; rewrite fdom0 sub0set.
 qed.
 
 local lemma GSwitching_BOrInjInstr_BOrInj &m :
@@ -990,7 +994,7 @@ seq 1 1 :
    card BOrInstr.outs{1} <=
    BOrInstr.adv_ctr{1} + BOrInstr.serv_ctr{1} + BOrInstr.clnt_ctr{1} /\
    ! mem BOrInstr.adv_inps{1} inp{1} /\
-   BOrInstr.adv_ctr{1} < adv_budget /\ ! mem (dom BOrInstr.mp{1}) inp{1}).
+   BOrInstr.adv_ctr{1} < adv_budget /\ ! dom BOrInstr.mp{1} inp{1}).
 auto.
 if => //.
 swap{2} 1 1; wp; auto; progress;
@@ -1021,7 +1025,7 @@ seq 1 :
    card BOrInjInstr.outs <=
    BOrInjInstr.adv_ctr + BOrInjInstr.serv_ctr + BOrInjInstr.clnt_ctr /\
    ! mem BOrInjInstr.adv_inps inp /\ BOrInjInstr.adv_ctr < adv_budget /\
-   ! mem (dom BOrInjInstr.mp) inp).
+   ! dom BOrInjInstr.mp inp).
 auto.
 auto; progress; apply output_distr_ll.
 wp; if.
@@ -1051,7 +1055,7 @@ seq 1 1 :
    card BOrInstr.outs{1} <=
    BOrInstr.adv_ctr{1} + BOrInstr.serv_ctr{1} + BOrInstr.clnt_ctr{1} /\
    ! mem BOrInstr.serv_inps{1} inp{1} /\
-   BOrInstr.serv_ctr{1} < serv_budget /\ ! mem (dom BOrInstr.mp{1}) inp{1}).
+   BOrInstr.serv_ctr{1} < serv_budget /\ ! dom BOrInstr.mp{1} inp{1}).
 auto.
 if => //.
 swap{2} 1 1; wp; auto; progress;
@@ -1082,7 +1086,7 @@ seq 1 :
    card BOrInjInstr.outs <=
    BOrInjInstr.adv_ctr + BOrInjInstr.serv_ctr + BOrInjInstr.clnt_ctr /\
    ! mem BOrInjInstr.serv_inps inp /\ BOrInjInstr.serv_ctr < serv_budget /\
-   ! mem (dom BOrInjInstr.mp) inp).
+   ! dom BOrInjInstr.mp inp).
 auto.
 auto; progress; apply output_distr_ll.
 wp; if.
@@ -1100,7 +1104,7 @@ proc.
 if => //; first auto.
 if => //.
 auto; progress;
-  [smt() | smt() | by rewrite set_eq 1:get_oget | smt() | smt()].
+  [smt() | smt() | by rewrite set_same | smt() | smt()].
 seq 1 1 :
   (={inp, out} /\
    ={mp, outs, coll, adv_inps, adv_ctr, adv_over, serv_inps, serv_ctr,
@@ -1109,7 +1113,7 @@ seq 1 1 :
    BOrInstr.serv_ctr{1} <= serv_budget /\
    card BOrInstr.outs{1} <=
    BOrInstr.adv_ctr{1} + BOrInstr.serv_ctr{1} + BOrInstr.clnt_ctr{1} /\
-   ! mem (dom BOrInstr.mp{1}) inp{1} /\
+   ! dom BOrInstr.mp{1} inp{1} /\
    BOrInstr.clnt_ctr{1} < clnt_budget).
 auto.
 if => //.
@@ -1141,7 +1145,7 @@ seq 1 :
    card BOrInjInstr.outs <=
    BOrInjInstr.adv_ctr + BOrInjInstr.serv_ctr + BOrInjInstr.clnt_ctr /\
    BOrInjInstr.clnt_ctr < clnt_budget /\
-   ! mem (dom BOrInjInstr.mp) inp).
+   ! dom BOrInjInstr.mp inp).
 auto.
 auto; progress; apply output_distr_ll.
 wp; if.
@@ -1462,15 +1466,15 @@ proof *.
 (* non-optimized implementation *)
 
 local module NOH' : HASHING, HASHING' = {
-  var mp : (input, output)fmap
+  var mp : (input, output) fmap
   var red_inps : input fset
 
   proc init() : unit = {
-    mp <- map0; red_inps <- fset0;
+    mp <- empty; red_inps <- fset0;
   }
 
   proc hash(inp : input) : output = {
-    if (! mem (dom mp) inp) {
+    if (! dom mp inp) {
       mp.[inp] <$ output_distr;
     }
     else {
@@ -1481,7 +1485,7 @@ local module NOH' : HASHING, HASHING' = {
   }
 
   proc rhash(inp : input) : unit = {
-    if (! mem (dom mp) inp) {
+    if (! dom mp inp) {
       mp.[inp] <$ output_distr;
       (* inp is redundant *)
       red_inps <- red_inps `|` fset1 inp;
@@ -1517,17 +1521,17 @@ local module NOH' : HASHING, HASHING' = {
 (* optimized implementation *)
 
 local module OH' : HASHING, HASHING' = {
-  var mp : (input, output)fmap
+  var mp : (input, output) fmap
   var red_inps : input fset
 
   proc init() : unit = {
-    mp <- map0; red_inps <- fset0;
+    mp <- empty; red_inps <- fset0;
   }
 
   proc hash(inp : input) : output = {
     (* the second disjunct is needed for the proof of
        lemma eager_hash *)
-    if (! mem (dom mp) inp \/ mem red_inps inp) {
+    if (! dom mp inp \/ mem red_inps inp) {
       mp.[inp] <$ output_distr;
       red_inps <- red_inps `\` fset1 inp;
     }
@@ -1535,7 +1539,7 @@ local module OH' : HASHING, HASHING' = {
   }
 
   proc rhash(inp : input) : unit = {
-    if (! mem (dom mp) inp) {
+    if (! dom mp inp) {
       red_inps <- red_inps `|` fset1 inp;
     }
   }
@@ -1620,25 +1624,24 @@ local module GOH' = {
 local lemma NonOptHashing_Or_NOH'_hash :
   equiv
   [NonOptHashing(Or).hash ~ NOH'.hash :
-   ={inp} /\ ={mp}(Or, NOH') /\ NOH'.red_inps{2} \subset dom NOH'.mp{2} ==>
-   ={res} /\ ={mp}(Or, NOH') /\ NOH'.red_inps{2} \subset dom NOH'.mp{2}].
+   ={inp} /\ ={mp}(Or, NOH') /\ NOH'.red_inps{2} \subset fdom NOH'.mp{2} ==>
+   ={res} /\ ={mp}(Or, NOH') /\ NOH'.red_inps{2} \subset fdom NOH'.mp{2}].
 proof.
 proc.
 if => //.
-auto; progress; smt(dom_set in_fsetU).
+auto; progress; move => x; rewrite fdom_set in_fsetU in_fset1; smt(subsetP).
 auto; progress => x; rewrite in_fsetD1 /#.
 qed.
 
 local lemma NonOptHashing_Or_NOH'_rhash :
   equiv
   [NonOptHashing(Or).rhash ~ NOH'.rhash :
-   ={inp} /\ ={mp}(Or, NOH') /\ NOH'.red_inps{2} \subset dom NOH'.mp{2} ==>
-   ={res} /\ ={mp}(Or, NOH') /\ NOH'.red_inps{2} \subset dom NOH'.mp{2}].
+   ={inp} /\ ={mp}(Or, NOH') /\ NOH'.red_inps{2} \subset fdom NOH'.mp{2} ==>
+   ={res} /\ ={mp}(Or, NOH') /\ NOH'.red_inps{2} \subset fdom NOH'.mp{2}].
 proof.
 proc; inline Or.hash; sp.
 if => //.
-auto; progress.
-rewrite dom_set subsetP; smt(in_fsetU1).
+auto; progress; rewrite fdom_set; smt(in_fsetU1).
 qed.
 
 local lemma GNonOptHashing_GNOH'_main :
@@ -1647,9 +1650,9 @@ local lemma GNonOptHashing_GNOH'_main :
    true ==> ={res}].
 proof.
 proc; inline Or.init NOH'.init.
-seq 1 2 : (={mp}(Or, NOH') /\ NOH'.red_inps{2} \subset dom NOH'.mp{2}).   
-auto; smt(dom0).
-call (_ : ={mp}(Or, NOH') /\ NOH'.red_inps{2} \subset dom NOH'.mp{2}).
+seq 1 2 : (={mp}(Or, NOH') /\ NOH'.red_inps{2} \subset fdom NOH'.mp{2}).   
+auto; smt(fdom0).
+call (_ : ={mp}(Or, NOH') /\ NOH'.red_inps{2} \subset fdom NOH'.mp{2}).
 apply NonOptHashing_Or_NOH'_hash.
 apply NonOptHashing_Or_NOH'_rhash.
 auto.
@@ -1666,15 +1669,16 @@ local lemma OH'_OptHashing_Or_hash :
   [OH'.hash ~ OptHashing(Or).hash:
    ={inp} /\ ={mp}(OH', Or) /\
    (forall (inp' : input),
-    mem OH'.red_inps{1} inp' => ! mem (dom OH'.mp{1}) inp') ==>
+    mem OH'.red_inps{1} inp' => ! dom OH'.mp{1} inp') ==>
    ={res} /\ ={mp}(OH', Or) /\
    (forall (inp' : input),
-    mem OH'.red_inps{1} inp' => ! mem (dom OH'.mp{1}) inp')].
+    mem OH'.red_inps{1} inp' => ! dom OH'.mp{1} inp')].
 proof.
 proc.
 if.
 smt().
-auto; smt(dom_set in_fsetU1 in_fsetD1).
+auto; progress;
+  rewrite -mem_fdom fdom_set in_fsetU1 negb_or; smt(in_fsetD1 mem_fdom).
 auto.
 qed.
 
@@ -1683,12 +1687,12 @@ local lemma OH'_OptHashing_Or_rhash :
   [OH'.rhash ~ OptHashing(Or).rhash:
    ={inp} /\ ={mp}(OH', Or) /\
    (forall (inp' : input),
-    mem OH'.red_inps{1} inp' => ! mem (dom OH'.mp{1}) inp') ==>
+    mem OH'.red_inps{1} inp' => ! dom OH'.mp{1} inp') ==>
    ={res} /\ ={mp}(OH', Or) /\
    (forall (inp' : input),
-    mem OH'.red_inps{1} inp' => ! mem (dom OH'.mp{1}) inp')].
+    mem OH'.red_inps{1} inp' => ! dom OH'.mp{1} inp')].
 proof.
-proc; auto; smt(dom_set in_fsetU1 in_fsetD1).
+proc; auto; progress; smt(fdom_set mem_fdom in_fsetU1 in_fsetD1).
 qed.
 
 local lemma GOH'_GOptHashing_main :
@@ -1700,13 +1704,13 @@ proc; inline OH'.init Or.init.
 seq 2 1 :
   (={mp}(OH', Or) /\
    (forall (inp' : input),
-    mem OH'.red_inps{1} inp' => ! mem (dom OH'.mp{1}) inp')).
+    mem OH'.red_inps{1} inp' => ! dom OH'.mp{1} inp')).
 auto; smt(in_fset0).
 call
   (_ :
    ={mp}(OH', Or) /\
    (forall (inp' : input),
-    mem OH'.red_inps{1} inp' => ! mem (dom OH'.mp{1}) inp')).
+    mem OH'.red_inps{1} inp' => ! dom OH'.mp{1} inp')).
 apply OH'_OptHashing_Or_hash.
 apply OH'_OptHashing_Or_rhash.
 auto.
@@ -1721,37 +1725,40 @@ proof. by byequiv GOH'_GOptHashing_main. qed.
 local lemma NOH'_rehash_red_inps_red_dom (inp' : input) :
   hoare
   [NOH'.rehash_red_inps :
-   mem NOH'.red_inps inp' ==> mem (dom NOH'.mp) inp'].
+   mem NOH'.red_inps inp' ==> dom NOH'.mp inp'].
 proof.
 proc; inline*; sp.
-while (mem l inp' \/ mem (dom NOH'.mp) inp').
-auto; progress.
-rewrite domP in_fsetU1.
-smt(mem_ne_list_drop1).
+while (mem l inp' \/ dom NOH'.mp inp').
+auto; progress;
+  rewrite -mem_fdom fdom_set in_fsetU1; smt(mem_fdom mem_ne_list_drop1).
 auto; smt(memE).
 qed.
 
 local lemma NOH'_rehash_red_inps_not_red_not_dom (inp' : input) :
   hoare
   [NOH'.rehash_red_inps :
-   ! mem NOH'.red_inps inp' /\ ! mem (dom NOH'.mp) inp' ==>
-   ! mem (dom NOH'.mp) inp'].
+   ! mem NOH'.red_inps inp' /\ ! dom NOH'.mp inp' ==>
+   ! dom NOH'.mp inp'].
 proof.
 proc; inline*; sp.
-while (! mem l inp' /\ ! mem (dom NOH'.mp) inp').
-auto; smt(mem_ne_list_drop1 domP in_fsetU1).
+while (! mem l inp' /\ ! dom NOH'.mp inp').
+auto; progress;
+  [smt(mem_ne_list_drop1) |
+   rewrite -mem_fdom fdom_set in_fsetU1 mem_fdom;
+   smt(mem_ne_list_drop1)].
 auto; smt(memE).
 qed.
 
 local lemma NOH'_rehash_red_inps_not_red_dom (inp' : input) :
   hoare
   [NOH'.rehash_red_inps :
-   ! mem NOH'.red_inps inp' /\ mem (dom NOH'.mp) inp' ==>
-   mem (dom NOH'.mp) inp'].
+   ! mem NOH'.red_inps inp' /\ dom NOH'.mp inp' ==>
+   dom NOH'.mp inp'].
 proof.
 proc; inline*; sp.
-while (mem (dom NOH'.mp) inp').
-auto; smt(domP in_fsetU1).
+while (dom NOH'.mp inp').
+auto; progress.
+rewrite -mem_fdom fdom_set in_fsetU1 mem_fdom /#.
 auto.
 qed.
 
@@ -1767,7 +1774,7 @@ proc; inline*; sp.
 while
   (={l} /\ NOH'.mp{1} = OH'.mp{2} /\
    ! mem l{1} inp /\ oget NOH'.mp{1}.[inp] = out).
-auto; progress; smt(mem_ne_list_drop1 getP_neq).
+auto; progress; [smt(mem_drop) | smt(mem_ne_list_drop1 get_setE)].
 auto; smt(memE).
 qed.
 
@@ -1794,8 +1801,9 @@ while
    NOH'.red_inps{1} = OH'.red_inps{2} /\
    NOH'.mp{1}.[inp{1} <- resu{1}] = OH'.mp{2}).
 auto; progress;
-  [smt(mem_ne_list_drop1) | smt(mem_ne_list_behead set_set)].
-auto; progress; smt(getP_eq).
+  [smt(mem_drop) |
+   rewrite 2!fmapSSE; smt(mem_ne_list_drop1)].
+auto; progress; by rewrite 2!get_set_sameE.
 qed.
 
 (* lemma for using iters_perm *)
@@ -1812,7 +1820,7 @@ alias{2} 1 with y1; alias{2} 4 with y2; swap{2} 4 -2.
 seq 2 2 :
   (={t1, t2, glob NOH'.I} /\ inp{1} = t1{1} /\ inp{2} = t2{2} /\
    t1{1} <> t2{2} /\ x1{1} = y2{2} /\ x2{1} = y1{2}); first auto.
-auto; progress; smt(set_set).
+auto; progress; by rewrite 2!fmapSSE /#.
 qed.
 
 local lemma NOH'_rehash_red_inps_rslt_rehash_red_inps_addl :
@@ -1911,7 +1919,7 @@ progress; by exists OH'.mp{2} OH'.red_inps{2} inp{2}.
 call NOH'_OH'_rehash_red_inps_addl_not_red; auto.
 inline OH'.rehash_red_inps_addl; sim.
 (* second case: ! mem NOH'.red_inps{1} inp{1} *)
-case (! mem (dom NOH'.mp{1}) inp{1}).
+case (! dom NOH'.mp{1} inp{1}).
 rcondt{2} 1; first auto; smt().
 rcondt{1} 2;
   first auto; call (NOH'_rehash_red_inps_not_red_not_dom inp{m}); auto.
@@ -1966,7 +1974,7 @@ move => x; by rewrite in_fset1.
 rcondf{1} 2; auto.
 call{1} (NOH'_rehash_red_inps_red_dom inp{m}); auto.
 sim.
-case (mem (dom NOH'.mp{1}) inp{1}).
+case (dom NOH'.mp{1} inp{1}).
 rcondf{2} 1; first auto. rcondf{1} 2; auto.
 call (NOH'_rehash_red_inps_not_red_dom inp{m}); auto.
 sim.
@@ -1990,7 +1998,7 @@ progress; by exists OH'.mp{2} NOH'.red_inps{1} inp{2}.
 inline NOH'.rehash_red_inps_addl; sp; wp.
 rnd.
 call (_ : ={NOH'.mp, NOH'.red_inps}); first sim.
-skip; progress; by rewrite getP_eq oget_some.
+skip; progress; by rewrite get_set_sameE oget_some.
 transitivity{1}
   { result <@ NOH'.rehash_red_inps_rslt(inp); }
   (={inp, NOH'.mp} /\ ! mem NOH'.red_inps{1} inp{1} /\

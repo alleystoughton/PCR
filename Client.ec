@@ -1073,101 +1073,105 @@ local module G3 = H2(BRO.BOrInj).
    see Inj.ec for injectivity predicate, inj *)
 
 pred counting
-     (sec : sec, hdb : hdb, mp : (elem * sec, tag)fmap,
+     (sec : sec, hdb : hdb, mp : (elem * sec, tag) fmap,
       elems_cnts : elems_counts) =
   (forall (tag : tag),
-   mem hdb tag => mem (rng mp) tag) /\
+   mem hdb tag => rng mp tag) /\
   (forall (elem : elem),
-   !(mem (dom elems_cnts) elem) =>
-   !(mem (dom mp) (elem, sec)) \/
+   ! dom elems_cnts elem =>
+   ! dom mp (elem, sec) \/
    num_occs (oget mp.[(elem, sec)]) hdb = 0) /\
   (forall (elem : elem),
-   mem (dom elems_cnts) elem =>
-   mem (dom mp) (elem, sec) /\
+   dom elems_cnts elem =>
+   dom mp (elem, sec) /\
    num_occs (oget mp.[(elem, sec)]) hdb = oget elems_cnts.[elem]).
 
 lemma counting_num_occs_get_count
-  (sec : sec, hdb : hdb, mp : (elem * sec, tag)fmap,
+  (sec : sec, hdb : hdb, mp : (elem * sec, tag) fmap,
    elems_cnts : elems_counts, elem : elem, tag : tag) :
   counting sec hdb mp elems_cnts =>
   mp.[(elem, sec)] = Some tag =>
   num_occs tag hdb = get_count elems_cnts elem.
 proof.
 move => [_ [ctg2 ctg3]] lu_mp_elem_sec_tag.
-have in_dom_mp_elem_sec : mem (dom mp) (elem, sec)
-  by rewrite in_dom /#.
+have in_dom_mp_elem_sec : dom mp (elem, sec)
+  by rewrite domE lu_mp_elem_sec_tag.
 have oget_mp_elem_seq_tag : oget mp.[(elem, sec)] = tag
   by rewrite lu_mp_elem_sec_tag oget_some.
 smt().
 qed.
 
 lemma counting_in_ec_dom_impl_in_dom_or
-  (sec : sec, hdb : hdb, mp : (elem * sec, tag)fmap,
+  (sec : sec, hdb : hdb, mp : (elem * sec, tag) fmap,
    elems_cnts : elems_counts, elem : elem) :
-  counting sec hdb mp elems_cnts => mem (dom elems_cnts) elem =>
-  mem (dom mp) (elem, sec).
+  counting sec hdb mp elems_cnts => dom elems_cnts elem =>
+  dom mp (elem, sec).
 proof.
 move => [_ [_ ctg3]] mem_dom_ec_elem.
 have // := ctg3 elem mem_dom_ec_elem.
 qed.
 
-lemma counting_empty (sec : sec, mp : (elem * sec, tag)fmap) :
+lemma counting_empty (sec : sec, mp : (elem * sec, tag) fmap) :
   counting sec [] mp empty_ec.
 proof.
 split; first smt(in_nil).
 split; first smt(num_occs_nil).
-smt(dom0 in_fset0).
+smt(mem_empty).
 qed.
 
 lemma counting_add_or_new_sec
-  (sec : sec, hdb : hdb, mp : (elem * sec, tag)fmap, elems_cnts : elems_counts,
+  (sec : sec, hdb : hdb, mp : (elem * sec, tag) fmap, elems_cnts : elems_counts,
    elem : elem, tag : tag) :
   counting sec hdb mp elems_cnts =>
-  !(mem (dom mp) (elem, sec)) => !(mem (rng mp) tag) =>
+  ! dom mp (elem, sec) => ! rng mp tag =>
   counting sec hdb (mp.[(elem, sec) <- tag]) elems_cnts.
 proof.
 move => ctg mem_dom_mp_elem_sec not_mem_rng_mp_tag.
 split => [tag' mem_hdb_tag' |].
-rewrite rng_set in_fsetU in_fset1 rem_id /#.
+rewrite -mem_frng frng_set in_fsetU1 rem_id // mem_frng; smt().
 split => [elem' not_mem_dom_ec_elem' | elem' mem_dom_ec_elem'].
 case (elem' = elem) => [<<- | ne_elem'_elem].
-right; rewrite getP /= oget_some num_occs_not_mem_imp0 /#.
-have [not_mem_dom_mp_elem'_sec | num_occs_get_mp_elem'_sec_hdb_eq0] :
-  !(mem (dom mp) (elem', sec)) \/
-  num_occs (oget mp.[(elem', sec)]) hdb = 0 by smt().
-left; rewrite domP in_fsetU in_fset1 /#.
 right.
-by rewrite getP /= ne_elem'_elem /= num_occs_not_mem_imp0
+rewrite get_set_sameE oget_some num_occs_not_mem_imp0 /#.
+have [not_mem_dom_mp_elem'_sec | num_occs_get_mp_elem'_sec_hdb_eq0] :
+  ! dom mp (elem', sec) \/
+  num_occs (oget mp.[(elem', sec)]) hdb = 0 by smt().
+left; rewrite mem_set /#.
+right.
+by rewrite get_setE /= (eq_sym elem _) ne_elem'_elem /= num_occs_not_mem_imp0
            1:num_occs_zero_imp_notmem.
-rewrite domP in_fsetU in_fset1 getP /#.
+rewrite mem_set get_setE; smt().
 qed.
 
 lemma counting_add_or_new_non_sec
-  (sec : sec, hdb : hdb, mp : (elem * sec, tag)fmap,
+  (sec : sec, hdb : hdb, mp : (elem * sec, tag) fmap,
    elems_cnts : elems_counts, elem : elem, sec' : sec, tag : tag) :
   counting sec hdb mp elems_cnts =>
-  sec' <> sec => !(mem (dom mp) (elem, sec')) =>
+  sec' <> sec => ! dom mp (elem, sec') =>
   counting sec hdb (mp.[(elem, sec') <- tag]) elems_cnts.
 proof.
 move => ctg ne_sec'_sec mem_dom_mp_elem_sec'.
 split => [tag' mem_tag'_hdb |].
-rewrite rng_set in_fsetU in_fset1 rem_id /#.
+rewrite -mem_frng frng_set in_fsetU1 mem_frng rem_id //#.
 split => [elem' not_mem_dom_ec_elem' | elem' mem_dom_ec_elem'].
-case (mem (dom mp) (elem', sec)) =>
+case (dom mp (elem', sec)) =>
   [mem_dom_mp_elem'_sec | not_mem_dom_mp_elem'_sec].
-right; rewrite getP /#.
-left; rewrite domP in_fsetU1 /#.
+right; rewrite get_setE /#.
+left; rewrite mem_set /#.
 split.
-rewrite domP in_fsetU1.
-left; smt(counting_in_ec_dom_impl_in_dom_or).
-rewrite getP /#.
+rewrite mem_set /#.
+rewrite get_setE.
+have -> /= : (elem, sec') <> (elem', sec) by smt().
+have elem_sec_in_mp : (elem', sec) \in mp
+  by apply (counting_in_ec_dom_impl_in_dom_or sec hdb mp elems_cnts).
+smt().
 qed.
 
 lemma counting_num_occs_add_hdb_eq
-  (sec : sec, hdb : hdb, mp : (elem * sec, tag)fmap,
+  (sec : sec, hdb : hdb, mp : (elem * sec, tag) fmap,
    elems_cnts : elems_counts, elem : elem) :
   counting sec hdb mp elems_cnts =>
-  mem (dom mp) (elem, sec) =>
+  dom mp (elem, sec) =>
   num_occs (oget mp.[(elem, sec)]) (hdb ++ [oget mp.[(elem, sec)]]) =
   oget (incr_count elems_cnts elem).[elem].
 proof.
@@ -1175,58 +1179,58 @@ move => cntg mem_dom_mp_elem_sec.
 rewrite /num_occs size_cat /= num_occs_upto_eq 1:size_cat /=.
 smt(size_ge0). by rewrite nth_cat /=.
 rewrite num_occs_upto_drop_last_part /incr_count.
-case (mem (dom elems_cnts) elem) => [mem_dom_ec_elem | not_mem_dom_ec_elem];
-  rewrite getP /= oget_some /#.
+case (dom elems_cnts elem) => [mem_dom_ec_elem | not_mem_dom_ec_elem];
+  rewrite get_setE /= oget_some /#.
 qed.
 
 lemma counting_num_occs_add_hdb_ne_notin_ec
-  (sec : sec, hdb : hdb, mp : (elem * sec, tag)fmap,
+  (sec : sec, hdb : hdb, mp : (elem * sec, tag) fmap,
    elems_cnts : elems_counts, elem elem' : elem) :
-  inj mp (rng mp) => counting sec hdb mp elems_cnts =>
-  elem' <> elem => mem (dom mp) (elem, sec) =>
-  !(mem (dom elems_cnts) elem') =>
-  !(mem (dom mp) (elem', sec)) \/
+  inj mp (frng mp) => counting sec hdb mp elems_cnts =>
+  elem' <> elem => dom mp (elem, sec) =>
+  ! dom elems_cnts elem' =>
+  ! dom mp (elem', sec) \/
   num_occs (oget mp.[(elem', sec)]) (hdb ++ [oget mp.[(elem, sec)]]) = 0.
 proof.
 move => inj [_ [cntg2 _]] ne_elem'_elem mem_dom_mp_elem_sec
         not_mem_dom_ec_elem'.
-case (mem (dom mp) (elem', sec)) => [mem_dom_mp_elem'_sec | //].
+case (dom mp (elem', sec)) => [mem_dom_mp_elem'_sec | //].
 right.
 have ne_tag_elem'_elem : oget mp.[(elem', sec)] <> oget mp.[(elem, sec)]
-  by apply (inj_cancel_contra mp (rng mp) (elem', sec) (elem, sec)).
+  by apply (inj_cancel_contra mp (frng mp) (elem', sec) (elem, sec)).
 rewrite /num_occs size_cat /= num_occs_upto_ne 1:size_cat /=.
 smt(size_ge0). rewrite nth_cat /#.
 rewrite num_occs_upto_drop_last_part /#.
 qed.
 
 lemma counting_num_occs_add_hdb_ne_in_ec
-  (sec : sec, hdb : hdb, mp : (elem * sec, tag)fmap,
+  (sec : sec, hdb : hdb, mp : (elem * sec, tag) fmap,
    elems_cnts : elems_counts, elem elem' : elem) :
-  inj mp (rng mp) => counting sec hdb mp elems_cnts =>
-  elem' <> elem => mem (dom mp) (elem, sec) =>
-  mem (dom elems_cnts) elem' =>
-  mem (dom mp) (elem', sec) /\
+  inj mp (frng mp) => counting sec hdb mp elems_cnts =>
+  elem' <> elem => dom mp (elem, sec) =>
+  dom elems_cnts elem' =>
+  dom mp (elem', sec) /\
   num_occs (oget mp.[(elem', sec)]) (hdb ++ [oget mp.[(elem, sec)]]) =
   oget elems_cnts.[elem'].
 proof.
 move => inj [_ [_ cntg3]] ne_elem'_elem mem_dom_mp_elem_sec
         mem_dom_ec_elem'.
-have mem_dom_mp_elem'_sec : mem (dom mp) (elem', sec)
+have mem_dom_mp_elem'_sec : dom mp (elem', sec)
   by apply (counting_in_ec_dom_impl_in_dom_or sec hdb mp elems_cnts elem').
 split => //.
 have ne_tag_elem'_elem : oget mp.[(elem', sec)] <> oget mp.[(elem, sec)]
-  by apply (inj_cancel_contra mp (rng mp) (elem', sec) (elem, sec)).
+  by apply (inj_cancel_contra mp (frng mp) (elem', sec) (elem, sec)).
 rewrite /num_occs size_cat /= num_occs_upto_ne 1:size_cat /=.
 smt(size_ge0). rewrite nth_cat /#.
 rewrite num_occs_upto_drop_last_part /#.
 qed.
 
 lemma counting_add_in_or
-  (sec : sec, hdb : hdb, mp : (elem * sec, tag)fmap,
+  (sec : sec, hdb : hdb, mp : (elem * sec, tag) fmap,
    elems_cnts : elems_counts, elem : elem) :
-  inj mp (rng mp) =>
+  inj mp (frng mp) =>
   counting sec hdb mp elems_cnts =>
-  mem (dom mp) (elem, sec) =>
+  dom mp (elem, sec) =>
   counting sec (hdb ++ [oget mp.[(elem, sec)]]) mp
            (incr_count elems_cnts elem).
 proof.
@@ -1234,17 +1238,19 @@ move => inj cntg mem_dom_mp_elem_sec.
 split => [tag mem_hdb_cat_get_elem_sec_tag |].
 rewrite mem_cat /= in mem_hdb_cat_get_elem_sec_tag.
 elim mem_hdb_cat_get_elem_sec_tag => [/# | ->].
-rewrite in_rng; exists (elem, sec); by rewrite get_oget.
+rewrite rngE /=; exists (elem, sec); by rewrite get_some.
 split => [elem' not_mem_dom_incr_ec_elem_elem' |].
-rewrite ec_incr_dom in_fsetU in_fset1 negb_or in not_mem_dom_incr_ec_elem_elem'.
+rewrite -mem_fdom ec_incr_dom in_fsetU in_fset1
+         negb_or in not_mem_dom_incr_ec_elem_elem'.
 elim not_mem_dom_incr_ec_elem_elem' => [not_mem_dom_ec_elem' ne_elem'_elem].
-by apply (counting_num_occs_add_hdb_ne_notin_ec sec hdb mp elems_cnts
-          elem elem').
+  rewrite (counting_num_occs_add_hdb_ne_notin_ec sec hdb mp elems_cnts
+           elem elem') //.
+  smt(mem_fdom).
 move => elem' mem_dom_incr_ec_elem_elem'.
-rewrite ec_incr_dom in_fsetU in_fset1 in mem_dom_incr_ec_elem_elem'.
+rewrite -mem_fdom ec_incr_dom in_fsetU in_fset1 in mem_dom_incr_ec_elem_elem'.
 case (elem' = elem) => [->> | ne_elem'_elem].
 split => //; first by apply counting_num_occs_add_hdb_eq.
-have mem_dom_ec_elem' : mem (dom elems_cnts) elem' by smt().
+have mem_dom_ec_elem' : dom elems_cnts elem' by smt(mem_fdom).
 split.
 by apply (counting_in_ec_dom_impl_in_dom_or sec hdb mp elems_cnts elem').
 have [_ ->] :=
@@ -1292,7 +1298,7 @@ seq 1 1 :
    card BRO.BOrInj.outs{1} <=
    BRO.BOrInj.adv_ctr{1} + BRO.BOrInj.serv_ctr{1} + BRO.BOrInj.clnt_ctr{1} /\
    ! mem BRO.BOrInj.adv_inps{1} inp{1} /\ BRO.BOrInj.adv_ctr{1} < adv_budget /\
-   ! mem (dom BRO.BOrInj.mp{1}) inp{1}); first auto.
+   ! dom BRO.BOrInj.mp{1} inp{1}); first auto.
 wp.
 if => //.
 auto => |> &2 _ le_serv_ctr_budg le_clnt_ctr_budg
@@ -1309,7 +1315,7 @@ have [inje ctg] := adv_not_over_imp_inj_cntg not_adv_over.
 split; first by rewrite inj_add.
 have -> : inp{2} = (fst inp{2}, snd inp{2}) by smt().
 case (snd inp{2} = sec) => [eq_snd_inp2_sec | not_eq_snd_inp2_sec].
-rewrite eq_snd_inp2_sec counting_add_or_new_sec /#.
+rewrite eq_snd_inp2_sec counting_add_or_new_sec; smt(mem_fdom mem_frng).
 rewrite counting_add_or_new_non_sec /#.
 rewrite fcardUI_indep 1:fsetI1 1:not_mem_outs_out' // fcard1 /#.
 auto => |> &2 _ le_serv_ctr_budg le_clnt_ctr_budg
@@ -1323,7 +1329,7 @@ have [inje ctg] := adv_not_over_imp_inj_cntg not_adv_over.
 split; first by rewrite inj_add 1:/#.
 have -> : inp{2} = (fst inp{2}, snd inp{2}) by smt().
 case (snd inp{2} = sec) => [eq_snd_inp2_sec | not_eq_snd_inp2_sec].
-rewrite eq_snd_inp2_sec counting_add_or_new_sec /#.
+rewrite eq_snd_inp2_sec counting_add_or_new_sec; smt(mem_fdom mem_frng).
 rewrite counting_add_or_new_non_sec /#.
 rewrite fcardUI_indep 1:fsetI1 1:not_mem_outs_out // fcard1 /#.
 call (_ : ={glob BRO.BOrInj}).
@@ -1342,14 +1348,14 @@ local lemma BOrInj_server_bhash_counting_mem_inps
    BRO.BOrInj.adv_ctr{1} <= adv_budget /\
    BRO.BOrInj.serv_ctr{1} <= db_uniqs_max /\
    BRO.BOrInj.clnt_ctr{1} = 0 /\
-   BRO.BOrInj.serv_inps{1} \subset dom BRO.BOrInj.mp{1} /\
+   BRO.BOrInj.serv_inps{1} \subset fdom BRO.BOrInj.mp{1} /\
    mem serv_inps' (elem, sec) /\ ! BRO.BOrInj.serv_over{1} /\
    inj BRO.BOrInj.mp{1} BRO.BOrInj.outs{1} /\
    counting sec hdb BRO.BOrInj.mp{1} elems_cnts /\
    card BRO.BOrInj.outs{1} <=
    BRO.BOrInj.adv_ctr{1} + BRO.BOrInj.serv_ctr{1} ==>
    ={res, glob BRO.BOrInj} /\ BRO.BOrInj.serv_ctr{1} <= db_uniqs_max /\
-   BRO.BOrInj.serv_inps{1} \subset dom BRO.BOrInj.mp{1} /\
+   BRO.BOrInj.serv_inps{1} \subset fdom BRO.BOrInj.mp{1} /\
    ! BRO.BOrInj.serv_over{1} /\
    inj BRO.BOrInj.mp{1} BRO.BOrInj.outs{1} /\
    counting sec hdb BRO.BOrInj.mp{1} elems_cnts /\
@@ -1362,8 +1368,8 @@ proof.
 proc.
 rcondt{1} 1; first auto. rcondt{2} 1; first auto.
 auto; progress [-delta].
-have mem_dom_mp_inp : mem (dom BRO.BOrInj.mp{2}) (elem, sec) by smt().
-by rewrite get_oget.
+have mem_dom_mp_inp : dom BRO.BOrInj.mp{2} (elem, sec) by smt(mem_fdom).
+by rewrite get_some.
 qed.
 
 local lemma BOrInj_server_bhash_counting_not_mem_inps
@@ -1377,14 +1383,14 @@ local lemma BOrInj_server_bhash_counting_not_mem_inps
    BRO.BOrInj.adv_ctr{1} <= adv_budget /\
    BRO.BOrInj.serv_ctr{1} < db_uniqs_max /\
    BRO.BOrInj.clnt_ctr{1} = 0 /\
-   BRO.BOrInj.serv_inps{1} \subset dom BRO.BOrInj.mp{1} /\
+   BRO.BOrInj.serv_inps{1} \subset fdom BRO.BOrInj.mp{1} /\
    ! mem serv_inps' (elem, sec) /\ ! BRO.BOrInj.serv_over{1} /\
    inj BRO.BOrInj.mp{1} BRO.BOrInj.outs{1} /\
    counting sec hdb BRO.BOrInj.mp{1} elems_cnts /\
    card BRO.BOrInj.outs{1} <=
    BRO.BOrInj.adv_ctr{1} + BRO.BOrInj.serv_ctr{1} ==>
    ={res, glob BRO.BOrInj} /\ BRO.BOrInj.serv_ctr{1} <= db_uniqs_max /\
-   BRO.BOrInj.serv_inps{1} \subset dom BRO.BOrInj.mp{1} /\
+   BRO.BOrInj.serv_inps{1} \subset fdom BRO.BOrInj.mp{1} /\
    ! BRO.BOrInj.serv_over{1} /\
    inj BRO.BOrInj.mp{1} BRO.BOrInj.outs{1} /\
    counting sec hdb BRO.BOrInj.mp{1} elems_cnts /\
@@ -1399,8 +1405,8 @@ rcondf{1} 1; first auto. rcondf{2} 1; first auto.
 rcondt{1} 1; first auto. rcondt{2} 1; first auto.
 if => //.
 auto; progress [-delta];
-  [smt() | move => inp' /in_fsetU1 [/# | -> //] | smt() |
-   by rewrite get_oget |
+  [smt() | move => inp' /in_fsetU1 [/# | -> //]; smt(mem_fdom) |
+   smt(lez_addr) | by rewrite get_some |
    by rewrite fcardUI_indep 1:fsetI1 1:/# fcard1].
 seq 1 1 :
   (={inp, out, glob BRO.BOrInj} /\
@@ -1409,13 +1415,13 @@ seq 1 1 :
    BRO.BOrInj.adv_ctr{1} <= adv_budget /\
    BRO.BOrInj.serv_ctr{1} < db_uniqs_max /\
    BRO.BOrInj.clnt_ctr{1} = 0 /\
-   BRO.BOrInj.serv_inps{1} \subset dom BRO.BOrInj.mp{1} /\
+   BRO.BOrInj.serv_inps{1} \subset fdom BRO.BOrInj.mp{1} /\
    ! mem BRO.BOrInj.serv_inps{1} (elem, sec) /\ ! BRO.BOrInj.serv_over{1} /\
    inj BRO.BOrInj.mp{1} BRO.BOrInj.outs{1} /\
    counting sec hdb BRO.BOrInj.mp{1} elems_cnts /\
    card BRO.BOrInj.outs{1} <=
    BRO.BOrInj.adv_ctr{1} + BRO.BOrInj.serv_ctr{1} /\
-   ! mem (dom BRO.BOrInj.mp{1}) inp{1}); first auto.
+   ! dom BRO.BOrInj.mp{1} inp{1}); first auto.
 if => //.
 auto =>
   |> &2 le_adv_ctr_budg card_serv_inps_lt_db_uniqs_max
@@ -1427,12 +1433,12 @@ have not_mem_outs_out' : ! mem BRO.BOrInj.outs{2} out'
 split; first smt().
 split.
 move => inp'' /in_fsetU1 [mem_inps_inp'' | ->].
-rewrite domP in_fsetU /#.
-rewrite domP_eq.
+rewrite mem_fdom mem_set -mem_fdom /#.
+rewrite mem_fdom mem_set /#.
 split; first by apply inj_add.
-split; first rewrite counting_add_or_new_sec /#.
+split; first rewrite counting_add_or_new_sec; smt(mem_fdom mem_frng).
 split; first rewrite fcardUI_indep 1:fsetI1 1:not_mem_outs_out' // fcard1 /#.
-split; first by rewrite getP_eq.
+split; first by rewrite get_set_sameE.
 by rewrite fcardUI_indep 1:fsetI1 1:/# fcard1.
 auto =>
   |> &2 le_adv_ctr_budg card_serv_inps_lt_db_uniqs_max
@@ -1441,12 +1447,12 @@ auto =>
 split; first smt().
 split.
 move => inp'' /in_fsetU1 [mem_inps_inp'' | ->].
-rewrite domP in_fsetU /#.
-rewrite domP_eq.
+rewrite mem_fdom mem_set -mem_fdom /#.
+rewrite mem_fdom mem_set /#.
 split; first by apply inj_add.
-split; first rewrite counting_add_or_new_sec /#.
+split; first rewrite counting_add_or_new_sec; smt(mem_fdom mem_frng).
 split; first rewrite fcardUI_indep 1:fsetI1 1:not_mem_outs_out // fcard1 /#.
-split; first by rewrite getP_eq.
+split; first by rewrite get_set_sameE.
 by rewrite fcardUI_indep 1:fsetI1 1:/# fcard1.
 qed.
 
@@ -1476,7 +1482,7 @@ proof.
 proc.
 rcondt{1} 1; first auto. rcondt{2} 1; first auto.
 if => //.
-auto; progress [-delta]; [smt() | smt() | by rewrite get_oget].
+auto; progress [-delta]; [smt() | smt() | by rewrite get_some].
 seq 1 1 :
   (={inp, out, glob BRO.BOrInj} /\
    inp{1} = (elem, sec) /\ clnt_ctr' = BRO.BOrInj.clnt_ctr{1} /\
@@ -1487,7 +1493,7 @@ seq 1 1 :
    counting sec hdb BRO.BOrInj.mp{1} elems_cnts /\
    card BRO.BOrInj.outs{1} <=
    BRO.BOrInj.adv_ctr{1} + BRO.BOrInj.serv_ctr{1} + BRO.BOrInj.clnt_ctr{1} /\
-   ! mem (dom BRO.BOrInj.mp{1}) inp{1}); first auto.
+   ! dom BRO.BOrInj.mp{1} inp{1}); first auto.
 wp.
 if => //.
 auto => |> &2 le_adv_ctr_budg le_serv_ctr_budg lt_clnt_ctr_budg
@@ -1497,17 +1503,17 @@ have not_mem_outs_out' : ! mem BRO.BOrInj.outs{2} out'
   by rewrite (in_supp_minus_not_pred out' tag_distr (mem BRO.BOrInj.outs{2})).
 split; first smt().
 split; first by apply inj_add.
-split; first rewrite counting_add_or_new_sec /#.
+split; first rewrite counting_add_or_new_sec; smt(mem_fdom mem_frng).
 split; first rewrite fcardUI_indep 1:fsetI1 1:not_mem_outs_out' // fcard1 /#.
-by rewrite getP_eq.
+by rewrite get_set_sameE.
 auto => |> &2 le_adv_ctr_budg le_serv_ctr_budg lt_clnt_ctr_budg
         not_clnt_over inje cntg outs_ub_ctrs not_mem_dom_mp_elem_sec
         not_mem_outs_out.
 split; first smt().
 split; first by apply inj_add.
-split; first rewrite counting_add_or_new_sec /#.
+split; first rewrite counting_add_or_new_sec; smt(mem_fdom mem_frng).
 split; first rewrite fcardUI_indep 1:fsetI1 1:not_mem_outs_out // fcard1 /#.
-by rewrite getP_eq.
+by rewrite get_set_sameE.
 qed.
 
 (* server metric -- division of server's database hashing into inputs
@@ -1645,7 +1651,7 @@ while
    BRO.BOrInj.adv_ctr{1} <= adv_budget /\
    BRO.BOrInj.clnt_ctr{1} = 0 /\
    BRO.BOrInj.serv_ctr{1} = card BRO.BOrInj.serv_inps{1} /\
-   BRO.BOrInj.serv_inps{1} \subset dom BRO.BOrInj.mp{1} /\
+   BRO.BOrInj.serv_inps{1} \subset fdom BRO.BOrInj.mp{1} /\
    serv_metric G2.sec{1} i{1} BRO.BOrInj.serv_inps{1} db{1} <= db_uniqs_max /\
    ! BRO.BOrInj.serv_over{1} /\
    inj BRO.BOrInj.mp{1} BRO.BOrInj.outs{1} /\
@@ -1677,8 +1683,11 @@ split; first by rewrite -serv_metric_mem_step.
 have -> :
   result_R = oget mp_R.[(nth elem_default db{2} i{2}, H2.sec{2})]
   by rewrite mp_R_lu_eq oget_some.
-apply counting_add_in_or => //;
-  [smt() | by rewrite in_dom mp_R_lu_eq].
+apply counting_add_in_or => |>.
+smt().
+have :
+  mp_R.[(nth elem_default db{2} i{2}, H2.sec{2})] <> None by smt().
+smt(domE).
 call 
   (BOrInj_server_bhash_counting_not_mem_inps
    sec' elem' hdb' elems_cnts' serv_inps').
@@ -1700,8 +1709,11 @@ split; first by rewrite -serv_metric_not_mem_step.
 have -> :
   result_R = oget mp_R.[(nth elem_default db{2} i{2}, H2.sec{2})]
   by rewrite mp_R_lu_eq oget_some.
-apply counting_add_in_or => //;
-  [smt() | by rewrite in_dom mp_R_lu_eq].
+apply counting_add_in_or => |>.
+smt().
+have :
+  mp_R.[(nth elem_default db{2} i{2}, H2.sec{2})] <> None by smt().
+smt(domE).
 auto; progress [-delta].
 rewrite size_ge0.
 by rewrite fcards0.
@@ -1859,7 +1871,7 @@ proc.
 seq 4 4 :
   (={glob BRO.BOrInj} /\ ={sec, cv, qrys_ctr}(G2, G3) /\
    G2.qrys_ctr{1} = 0 /\
-   BRO.BOrInj.mp{1} = map0 /\ BRO.BOrInj.outs{1} = fset0 /\
+   BRO.BOrInj.mp{1} = empty /\ BRO.BOrInj.outs{1} = fset0 /\
    BRO.BOrInj.adv_ctr{1} = 0 /\ BRO.BOrInj.adv_inps{1} = fset0 /\
    ! BRO.BOrInj.adv_over{1} /\
    BRO.BOrInj.serv_ctr{1} = 0 /\ BRO.BOrInj.serv_inps{1} = fset0 /\

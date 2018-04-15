@@ -9,7 +9,7 @@
 
 (***************************** Standard Theories ******************************)
 
-require export AllCore List Distr Mu_mem Dexcepted FSet NewFMap List
+require export AllCore List Distr Mu_mem Dexcepted FSet SmtMap List
                FelTactic.
 require export StdBigop. export Bigreal BRA.
 require export StdOrder.
@@ -18,7 +18,7 @@ require Word.
 
 (***************************** Auxiliary Theories *****************************)
 
-require export DistrAux ListAux FMapAux FSetAux.
+require export DistrAux ListAux MapAux FSetAux.
 
 (******************** Number of Unique Elements in a List *********************)
 

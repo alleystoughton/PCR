@@ -31,7 +31,7 @@ echo "********** Auxiliary Theories **********"
 echo ""
 
 check DistrAux.ec
-check FMapAux.ec
+check MapAux.ec
 check FSetAux.ec
 check ListAux.ec
 
