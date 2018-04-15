@@ -1,5 +1,7 @@
 (* MapAux.ec *)
 
+(* Auxiliary Lemmas on Maps *)
+
 require import AllCore SmtMap FSet.
 
 lemma get_none (mp : ('a, 'b) fmap, x : 'a) :
