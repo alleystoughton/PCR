@@ -26,16 +26,16 @@ move => x1 x2.
 rewrite 2!mem_set 2!get_setE.
 elim => [x1_in_mp | -> /=].
 elim => [x2_in_mp | -> /=].
-case (x = x1) => [ ->> // | ne_x_x1].
-case (x = x2) => [ ->> // | ne_x_x2].
+case (x1 = x) => [ ->> // | ne_x1_x].
+case (x2 = x) => [ ->> // | ne_x2_x].
 by apply inj_mp.
 rewrite oget_some.
-case (x = x1) => [// | ne_x_x1 get_x1_y].
+case (x1 = x) => [// | ne_x1_x get_x1_y].
 have // : y \in ran.
   rewrite -rng_mp mem_frng rngE /=.
   exists x1; by rewrite (get_some mp x1).
 elim => //.
-case (x = x2) => [<<- // | x_ne_x2 x2_in_mp].
+case (x2 = x) => [<<- // | ne_x2_x x2_in_mp].
 rewrite oget_some eq_sym; move => get_x2_eq_y.
 have // : y \in ran.
   rewrite -rng_mp mem_frng rngE /=.

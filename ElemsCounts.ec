@@ -91,7 +91,7 @@ proof.
 move => ne_elem'_elem elem'_in_cnts; rewrite /incr_count.
 rewrite eq_sym in ne_elem'_elem.
 case (elem \in cnts) => [elem_in_cnts | elem_not_in_cnts];
-  by rewrite get_setE ne_elem'_elem //.
+  by rewrite get_setE (eq_sym elem') ne_elem'_elem.
 qed.
 
 lemma ec_incr_get_ne (cnts : 'a counts) (elem elem' : 'a) :
@@ -114,22 +114,22 @@ case (elem1 = elem2) => [-> // | ne_elem1_elem2].
 case (elem1 \in cnts) => [elem1_in_cnts | elem1_not_in_cnts].
 case (elem2 \in cnts) => [elem2_in_cnts | elem2_not_in_cnts].
 do 2! rewrite (ec_incr_mem_eq cnts _) //.
-rewrite ec_incr_mem_eq 1:domE get_setE ne_elem1_elem2 //.
-by rewrite ec_incr_mem_eq 1:domE get_setE (eq_sym elem2 elem1)
-           ne_elem1_elem2 //= fmapSS_neqE.
+rewrite ec_incr_mem_eq 1:domE get_setE (eq_sym elem2) ne_elem1_elem2 //.
+by rewrite ec_incr_mem_eq 1:domE get_setE ne_elem1_elem2 //= fmapSS_neqE
+           1:(eq_sym elem2) //.
 by rewrite (ec_incr_mem_eq cnts elem1) // (ec_incr_not_mem_eq cnts elem2) //
-           (ec_incr_not_mem_eq _ elem2) 1:domE 1:get_setE 1:ne_elem1_elem2 //
-           ec_incr_mem_eq 1:domE get_setE (eq_sym elem2 elem1)
-           ne_elem1_elem2 //= fmapSS_neqE.
+           (ec_incr_not_mem_eq _ elem2) 1:domE 1:get_setE 1:(eq_sym elem2)
+           1:ne_elem1_elem2 // ec_incr_mem_eq 1:domE get_setE
+           ne_elem1_elem2 //= fmapSS_neqE 1:(eq_sym elem2).
 case (elem2 \in cnts) => [elem2_in_cnts | elem2_not_in_cnts].
 by rewrite (ec_incr_mem_eq cnts elem2) // (ec_incr_not_mem_eq cnts elem1) //
-           (ec_incr_not_mem_eq _ elem1) 1:domE 1:get_setE 1:(eq_sym elem2 elem1)
-           1:ne_elem1_elem2 // ec_incr_mem_eq 1:domE get_setE ne_elem1_elem2 //=
-           fmapSS_neqE.
+           (ec_incr_not_mem_eq _ elem1) 1:domE 1:get_setE 1:ne_elem1_elem2 //
+           ec_incr_mem_eq 1:domE get_setE 1:(eq_sym elem2) 1:ne_elem1_elem2 //=
+           fmapSS_neqE 1:(eq_sym elem2) // 1:(eq_sym elem2) ne_elem1_elem2.
 by rewrite (ec_incr_not_mem_eq cnts elem1) // (ec_incr_not_mem_eq cnts elem2) //
+           ec_incr_not_mem_eq 1:domE 1:get_setE 1:(eq_sym elem2) 1:ne_elem1_elem2 //
            ec_incr_not_mem_eq 1:domE 1:get_setE 1:ne_elem1_elem2 //
-           ec_incr_not_mem_eq 1:domE 1:get_setE 1:(eq_sym elem2 elem1)
-           1:ne_elem1_elem2 // fmapSS_neqE 1:ne_elem1_elem2.
+           fmapSS_neqE 1:(eq_sym elem2) 1:ne_elem1_elem2.
 qed.
 
 (* predicate preserved by incr_count *)

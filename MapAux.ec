@@ -17,9 +17,9 @@ lemma set_same (mp : ('a, 'b) fmap, x : 'a) :
 proof.
 move => x_in_mp.
 apply fmap_eqP => y.
-case (x = y) => [->> | ne_x_y].
+case (y = x) => [->> | ne_y_x].
 by rewrite get_set_sameE get_some.
-by rewrite get_setE ne_x_y.
+by rewrite get_setE ne_y_x.
 qed.
 
 lemma frng_set (mp : ('a, 'b) fmap, x : 'a, y : 'b) :
@@ -27,13 +27,13 @@ lemma frng_set (mp : ('a, 'b) fmap, x : 'a, y : 'b) :
 proof.
 apply fsetP => z; rewrite in_fsetU in_fset1 2!mem_frng 2!rngE /=.
 split => [[x'] | [[x'] | ->]].
-case (x = x') => [-> | ne_x_x'].
+case (x' = x) => [-> | ne_x'_x].
 by rewrite get_set_sameE /= => ->.
-rewrite get_setE ne_x_x' /= => get_x'_some_z.
-left; exists x'; by rewrite remE ne_x_x'.
+rewrite get_setE ne_x'_x /= => get_x'_some_z.
+left; exists x'; by rewrite remE ne_x'_x.
 rewrite remE.
-case (x = x') => // ne_x_x' get_x'_some_z.
-exists x'; by rewrite get_setE ne_x_x'.
+case (x' = x) => // ne_x'_x get_x'_some_z.
+exists x'; by rewrite get_setE ne_x'_x.
 exists x; by rewrite get_set_sameE.
 qed.
 
@@ -49,7 +49,7 @@ lemma rem_id (mp : ('a, 'b) fmap, x : 'a) :
   x \notin mp => rem mp x = mp.
 proof.
 move => x_notin_mp; apply fmap_eqP => y; rewrite remE.
-case (x = y) => // <-.
+case (y = x) => // ->.
 case (None = mp.[x]) => // get_not_none.
 rewrite eq_sym -domE // in get_not_none.
 qed.

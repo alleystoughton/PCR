@@ -1138,7 +1138,7 @@ have [not_mem_dom_mp_elem'_sec | num_occs_get_mp_elem'_sec_hdb_eq0] :
   num_occs (oget mp.[(elem', sec)]) hdb = 0 by smt().
 left; rewrite mem_set /#.
 right.
-by rewrite get_setE /= (eq_sym elem _) ne_elem'_elem /= num_occs_not_mem_imp0
+by rewrite get_setE /= ne_elem'_elem /= num_occs_not_mem_imp0
            1:num_occs_zero_imp_notmem.
 rewrite mem_set get_setE; smt().
 qed.
@@ -1161,7 +1161,7 @@ left; rewrite mem_set /#.
 split.
 rewrite mem_set /#.
 rewrite get_setE.
-have -> /= : (elem, sec') <> (elem', sec) by smt().
+have -> /= : (elem', sec) <> (elem, sec') by smt().
 have elem_sec_in_mp : (elem', sec) \in mp
   by apply (counting_in_ec_dom_impl_in_dom_or sec hdb mp elems_cnts).
 smt().
