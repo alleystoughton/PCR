@@ -1,4 +1,4 @@
-(* RandomOracle.eca *) prover ["Z3"].
+(* RandomOracle.eca *)
 
 (* Random Oracle *)
 
