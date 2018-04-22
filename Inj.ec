@@ -2,6 +2,8 @@
 
 (* Injective Maps *)
 
+prover [""].  (* no SMT solvers *)
+
 require import AllCore SmtMap FSet MapAux.
 
 pred inj (mp : ('a, 'b) fmap, ran : 'b fset) =

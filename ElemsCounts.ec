@@ -2,6 +2,8 @@
 
 (* Finite Maps Providing Counts for Certain Elements *)
 
+prover quorum=2 ["Alt-Ergo" "Z3"].  (* both Alt-Ergo and Z3 must succeed *)
+
 require import AllCore FSet SmtMap MapAux.
 
 (* counts for certain elements; counts are always >= 1 *)

@@ -2,6 +2,8 @@
 
 (* Operators for Counting Numbers of Occurrences of Elements in Lists *)
 
+prover quorum=2 ["Alt-Ergo" "Z3"].  (* both Alt-Ergo and Z3 must succeed *)
+
 require import AllCore List StdRing.
 
 (* if 0 <= n <= size ys, then num_occs_upto x ys n is the number of

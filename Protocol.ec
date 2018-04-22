@@ -7,6 +7,8 @@
    lemmas supporting it and the Server, Third Party and Client
    Proofs. *)
 
+prover [""].  (* no SMT solvers *)
+
 (***************************** Standard Theories ******************************)
 
 require export AllCore List Distr Mu_mem Dexcepted FSet SmtMap List

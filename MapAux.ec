@@ -2,6 +2,8 @@
 
 (* Auxiliary Lemmas on Maps *)
 
+prover [""].  (* no SMT solvers *)
+
 require import AllCore SmtMap FSet.
 
 lemma get_none (mp : ('a, 'b) fmap, x : 'a) :

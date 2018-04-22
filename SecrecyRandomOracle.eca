@@ -25,6 +25,8 @@
      * A lemma upper-bounding the absolute value of the difference in
        the probabilities of these games returning true. *)
 
+prover quorum=2 ["Alt-Ergo" "Z3"].  (* both Alt-Ergo and Z3 must succeed *)
+
 (***************************** Standard Theories ******************************)
 
 require import AllCore Distr FSet SmtMap.

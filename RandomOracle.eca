@@ -24,6 +24,8 @@
    sub-theories: budgeted random oracles and a mechanism for removing
    redundant hashing. (See below for the details.) *)
 
+prover quorum=2 ["Alt-Ergo" "Z3"].  (* both Alt-Ergo and Z3 must succeed *)
+
 (***************************** Standard Theories ******************************)
 
 require import AllCore Distr Mu_mem Dexcepted FSet SmtMap List

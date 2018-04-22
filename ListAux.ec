@@ -2,6 +2,8 @@
 
 (* Auxiliary Lemmas on Lists *)
 
+prover quorum=2 ["Alt-Ergo" "Z3"].  (* both Alt-Ergo and Z3 must succeed *)
+
 require import AllCore List.
 require import StdOrder. import IntOrder.
 
