@@ -6,6 +6,8 @@
    randomly shuffling a list of elements of type t, where
    t is a parameter to the theory *)
 
+prover quorum=2 ["Alt-Ergo" "Z3"].  (* both Alt-Ergo and Z3 must succeed *)
+
 (***************************** Standard Theories ******************************)
 
 require import AllCore Distr DInterval Real List FSet.

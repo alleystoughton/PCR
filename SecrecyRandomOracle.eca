@@ -25,10 +25,16 @@
      * A lemma upper-bounding the absolute value of the difference in
        the probabilities of these games returning true. *)
 
+prover quorum=2 ["Alt-Ergo" "Z3"].  (* both Alt-Ergo and Z3 must succeed *)
+
 (***************************** Standard Theories ******************************)
 
-require import AllCore Distr FSet NewFMap.
+require import AllCore Distr FSet SmtMap.
 require import StdOrder. import RealOrder.
+
+(***************************** Auxiliary Theories *****************************)
+
+require import MapAux.
 
 (**************************** Supporting Theories *****************************)
 
@@ -107,14 +113,14 @@ module type SEC_OR = {
    is returned; calls to hash aren't limited *)
 
 module SecOrDep : SEC_OR = {
-  var mp : (elem * sec, output)fmap  (* oracle map *)
-  var secret : sec                   (* secret *)
-  var inps : (elem * sec)fset        (* seen limited inputs when under limit;
-                                        subset of dom mp *)
-  var ctr : int                      (* ctr = card inps *)
+  var mp : (elem * sec, output) fmap  (* oracle map *)
+  var secret : sec                    (* secret *)
+  var inps : (elem * sec) fset        (* seen limited inputs when under limit;
+                                         subset of dom mp *)
+  var ctr : int                       (* ctr = card inps *)
 
   proc init(sec : sec) : unit = {
-    mp <- map0;
+    mp <- empty;
     secret <- sec;
     inps <- fset0;
     ctr <- 0;
@@ -131,7 +137,7 @@ module SecOrDep : SEC_OR = {
       ctr <- ctr + 1;
       (* actual hashing; could be already in map's domain because of
          call to hash *)
-      if (mem (dom mp) inp) {
+      if (dom mp inp) {
         out <- oget mp.[inp];
       }
       else {
@@ -146,7 +152,7 @@ module SecOrDep : SEC_OR = {
   }
 
   proc hash(elem : elem) : output = {  (* uses secret *)
-    if (! mem (dom mp) (elem, secret)) {
+    if (! dom mp (elem, secret)) {
       mp.[(elem, secret)] <$ output_distr;
     }
     return oget mp.[(elem, secret)];
@@ -163,15 +169,15 @@ module SecOrDep : SEC_OR = {
 
 module SecOrIndep : SEC_OR = {
   (* no secret is recorded *)
-  var lhmp : (elem * sec, output)fmap  (* map for limited hashing *)
-  var hmp : (elem, output)fmap         (* map for unlimited hashing *)
-  var inps : (elem * sec)fset          (* seen limited inputs when under limit;
-                                          equal to dom lhmp *)
-  var ctr : int                        (* ctr = card inps *)
+  var lhmp : (elem * sec, output) fmap  (* map for limited hashing *)
+  var hmp : (elem, output) fmap         (* map for unlimited hashing *)
+  var inps : (elem * sec) fset          (* seen limited inputs when under limit;
+                                           equal to dom lhmp *)
+  var ctr : int                         (* ctr = card inps *)
 
   proc init(sec : sec) : unit = {  (* secret is ignored *)
-    lhmp = map0;
-    hmp = map0;
+    lhmp = empty;
+    hmp = empty;
     inps = fset0;
     ctr = 0;
   }
@@ -195,7 +201,7 @@ module SecOrIndep : SEC_OR = {
   }
 
   proc hash(elem : elem) : output = {  (* uses hmp *)
-    if (! mem (dom hmp) elem) {
+    if (! dom hmp elem) {
       hmp.[elem] <$ output_distr;
     }
     return oget hmp.[elem];
@@ -258,14 +264,14 @@ axiom SecAdv_ll :
    is called with input whose second component is the secret *)
 
 local module SecOrDepInstr : SEC_OR = {
-  var mp : (elem * sec, output)fmap
+  var mp : (elem * sec, output) fmap
   var secret : sec
-  var inps : (elem * sec)fset
+  var inps : (elem * sec) fset
   var ctr : int
   var guessed : bool  (* true iff secret has been passed to lhash *)
 
   proc init(sec : sec) : unit = {
-    mp <- map0;
+    mp <- empty;
     secret <- sec;
     inps <- fset0;
     ctr <- 0;
@@ -281,7 +287,7 @@ local module SecOrDepInstr : SEC_OR = {
     elif (ctr < limit) {
       inps <- inps `|` fset1 inp;
       ctr <- ctr + 1;
-      if (mem (dom mp) inp) {
+      if (dom mp inp) {
         out <- oget mp.[inp];
       }
       else {
@@ -299,7 +305,7 @@ local module SecOrDepInstr : SEC_OR = {
   }
 
   proc hash(elem : elem) : output = {
-    if (! mem (dom mp) (elem, secret)) {
+    if (! dom mp (elem, secret)) {
       mp.[(elem, secret)] <$ output_distr;
     }
     return oget mp.[(elem, secret)];
@@ -335,16 +341,16 @@ proof. by byequiv GDep_GDepInstr_main. qed.
    is called with input whose second component is the secret *)
 
 local module SecOrIndepInstr : SEC_OR = {
-  var lhmp : (elem * sec, output)fmap
-  var hmp : (elem, output)fmap
-  var inps : (elem * sec)fset
+  var lhmp : (elem * sec, output) fmap
+  var hmp : (elem, output) fmap
+  var inps : (elem * sec) fset
   var ctr : int
   var secret : sec  (* need to retain secret *)
   var guessed : bool  (* true iff secret has been passed to lhash *)
 
   proc init(sec : sec) : unit = {
-    lhmp <- map0;
-    hmp <- map0;
+    lhmp <- empty;
+    hmp <- empty;
     inps <- fset0;
     ctr <- 0;
     secret <- sec;  (* retain secret *)
@@ -373,7 +379,7 @@ local module SecOrIndepInstr : SEC_OR = {
   }
 
   proc hash(elem : elem) : output = {
-    if (! mem (dom hmp) elem) {
+    if (! dom hmp elem) {
       hmp.[elem] <$ output_distr;
     }
     return oget hmp.[elem];
@@ -447,14 +453,14 @@ realize limit_ge0. apply limit_ge0. qed.
    the secret guessing oracle *)
 
 local module ConvToSecOrIndepInstr(SGOr : SG.SG_OR) : SEC_OR = {
-  var lhmp : (elem * sec, output)fmap
-  var hmp : (elem, output)fmap
-  var inps : (elem * sec)fset
+  var lhmp : (elem * sec, output) fmap
+  var hmp : (elem, output) fmap
+  var inps : (elem * sec) fset
   var ctr : int
 
   proc init(sec : sec) : unit = {  (* secret is ignored *)
-    lhmp <- map0;
-    hmp <- map0;
+    lhmp <- empty;
+    hmp <- empty;
     inps <- fset0;
     ctr <- 0;
   }
@@ -479,7 +485,7 @@ local module ConvToSecOrIndepInstr(SGOr : SG.SG_OR) : SEC_OR = {
   }
 
   proc hash(elem : elem) : output = {
-    if (! mem (dom hmp) elem) {
+    if (! dom hmp elem) {
       hmp.[elem] <$ output_distr;
     }
     return oget hmp.[elem];
@@ -614,26 +620,26 @@ qed.
 
 pred invar
      (sec  : sec,
-      mp   : (elem * sec, output)fmap,
-      lhmp : (elem * sec, output)fmap,
-      hmp  : (elem, output)fmap,
-      inps : (elem * sec)fset) =
+      mp   : (elem * sec, output) fmap,
+      lhmp : (elem * sec, output) fmap,
+      hmp  : (elem, output) fmap,
+      inps : (elem * sec) fset) =
   (forall (elem : elem),
-   mem (dom mp) (elem, sec) <=> mem (dom hmp) elem) /\
+   dom mp (elem, sec) <=> dom hmp elem) /\
   (forall (elem : elem), oget mp.[(elem, sec)] = oget hmp.[elem]) /\
   (forall (elem : elem, sec' : sec),
-   sec' <> sec => mem (dom mp) (elem, sec') <=> mem (dom lhmp) (elem, sec')) /\
+   sec' <> sec => dom mp (elem, sec') <=> dom lhmp (elem, sec')) /\
   (forall (elem : elem, sec' : sec),
    sec' <> sec => oget mp.[(elem, sec')] = oget lhmp.[(elem, sec')]) /\
   (forall (inp : elem * sec),
-   mem inps inp <=> mem (dom mp) inp /\ snd inp <> sec).
+   mem inps inp <=> dom mp inp /\ snd inp <> sec).
 
 local lemma invar_oget_mp_lhmp
   (sec  : sec,
-   mp   : (elem * sec, output)fmap,
-   lhmp : (elem * sec, output)fmap,
-   hmp  : (elem, output)fmap,
-   inps : (elem * sec)fset,
+   mp   : (elem * sec, output) fmap,
+   lhmp : (elem * sec, output) fmap,
+   hmp  : (elem, output) fmap,
+   inps : (elem * sec) fset,
    inp  : elem * sec) :
   invar sec mp lhmp hmp inps =>
   mem inps inp =>
@@ -645,16 +651,16 @@ qed.
 
 local lemma invar_update_lhmp
   (sec  : sec,
-   mp   : (elem * sec, output)fmap,
-   lhmp : (elem * sec, output)fmap,
-   hmp  : (elem, output)fmap,
-   inps : (elem * sec)fset,
+   mp   : (elem * sec, output) fmap,
+   lhmp : (elem * sec, output) fmap,
+   hmp  : (elem, output) fmap,
+   inps : (elem * sec) fset,
    inp  : elem * sec,
    out  : output) :
   invar sec mp lhmp hmp inps =>
   ! mem inps inp =>
   snd inp <> sec =>
-  ! mem (dom mp) inp =>
+  ! dom mp inp =>
   invar sec mp.[inp <- out] lhmp.[inp <- out] hmp (inps `|` fset1 inp).
 proof.
 move => invr; rewrite pairS /=.
@@ -662,40 +668,35 @@ move => not_mem_inps_inp  snd_inp_ne_sec not_mem_dom_mp_inp.
 split.
 move => elem.
 split => [mem_dom_mp_upd_elem_sec | mem_dom_hmp_elem].
-smt(domP in_fsetU in_fset1).
-rewrite domP in_fsetU in_fset1 /#.
-split; first smt(getP).
+smt(mem_set in_fsetU in_fset1).
+rewrite mem_set /#.
+split; first smt(get_setE).
 split.
 move => elem sec' ne_sec_sec'.
-split => [mem_dom_mp_upd_elem_sec' | mem_dom_lhmp_upd_elem_sec'].
-rewrite domP in_fsetU.
-rewrite domP in_fsetU in mem_dom_mp_upd_elem_sec'.
-smt().
-rewrite domP in_fsetU.
-rewrite domP in_fsetU in mem_dom_lhmp_upd_elem_sec'.
-smt().
-split; first smt(getP).
-smt(domP in_fsetU in_fset1 getP).
+split => [mem_dom_mp_upd_elem_sec' | mem_dom_lhmp_upd_elem_sec'];
+  smt(mem_set).
+split; first smt(get_setE).
+smt(mem_set in_fsetU in_fset1 get_setE).
 qed.
 
 local lemma invar_update_hmp
   (sec  : sec,
-   mp   : (elem * sec, output)fmap,
-   lhmp : (elem * sec, output)fmap,
-   hmp  : (elem, output)fmap,
-   inps : (elem * sec)fset,
+   mp   : (elem * sec, output) fmap,
+   lhmp : (elem * sec, output) fmap,
+   hmp  : (elem, output) fmap,
+   inps : (elem * sec) fset,
    elem : elem,
    out  : output) :
   invar sec mp lhmp hmp inps =>
-  ! mem (dom mp) (elem, sec) =>
+  ! dom mp (elem, sec) =>
   invar sec mp.[(elem, sec) <- out] lhmp hmp.[elem <- out] inps.
 proof.
 move => invr not_mem_dom_mp_elem_sec.
-split; first smt(domP in_fsetU1).
-split; first smt(getP).
-split; first smt(domP in_fsetU1).
-split; first smt(getP).
-smt(domP in_fsetU1).
+split; first smt(mem_set in_fsetU1).
+split; first smt(get_setE).
+split; first smt(mem_set in_fsetU1).
+split; first smt(get_setE).
+smt(mem_set in_fsetU1).
 qed.
 
 (* in the following lemmas, we use reasoning up to failure *)
@@ -762,7 +763,7 @@ split => // _.
 move => mp in_supp.
 split => // _.
 split => // _ /= _.
-split; first smt(getP).
+split; first smt(get_setE).
 apply invar_update_hmp => //.
 auto; smt().
 qed.
@@ -781,7 +782,7 @@ seq 2 2 :
    invar
    SecOrDepInstr.secret{1} SecOrDepInstr.mp{1} SecOrIndepInstr.lhmp{2}
    SecOrIndepInstr.hmp{2} SecOrDepInstr.inps{1}).
-inline *; auto; progress; smt(dom_eq0 dom0 in_fset0 map0P).
+inline *; auto; progress; smt(mem_empty emptyE in_fset0).
 call
   (_ :
    ! SecOrDepInstr.guessed{1} /\

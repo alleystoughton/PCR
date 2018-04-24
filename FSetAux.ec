@@ -2,6 +2,8 @@
 
 (* Auxiliary Lemmas on Finite Sets *)
 
+prover quorum=2 ["Alt-Ergo" "Z3"].  (* both Alt-Ergo and Z3 must succeed *)
+
 require import FSet List.
 
 lemma oflist_cat (xs ys : 'a list) :

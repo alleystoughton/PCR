@@ -2,6 +2,8 @@
 
 (* Proof of Security Against Server *)
 
+prover quorum=2 ["Alt-Ergo" "Z3"].  (* both Alt-Ergo and Z3 must succeed *)
+
 (************* PCR Protocol and Supporting Definitions and Lemmas *************)
 
 require import Protocol.

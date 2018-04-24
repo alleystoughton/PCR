@@ -2,6 +2,8 @@
 
 (* Proof of Security Against TP (Third Party) *)
 
+prover quorum=2 ["Alt-Ergo" "Z3"].  (* both Alt-Ergo and Z3 must succeed *)
+
 (************* PCR Protocol and Supporting Definitions and Lemmas *************)
 
 require import Protocol.
@@ -679,23 +681,23 @@ qed.
 
 (* preparation for showing equivalence between G1 and SRO.GDep(SecAdv) *)
 
-local lemma G1_SRO_SecOrDep_hash_elem_hash (xs : (elem * sec)fset) :
+local lemma G1_SRO_SecOrDep_hash_elem_hash (xs : (elem * sec) fset) :
   equiv
   [G1.hash_elem ~ SRO.SecOrDep.hash :
    ={elem} /\
    G1.sec{1} = SRO.SecOrDep.secret{2} /\ ={mp}(RO.Or, SRO.SecOrDep) /\
-   xs = dom RO.Or.mp{1} ==>
-   ={res} /\ ={mp}(RO.Or, SRO.SecOrDep) /\ xs \subset dom RO.Or.mp{1}].
+   xs = fdom RO.Or.mp{1} ==>
+   ={res} /\ ={mp}(RO.Or, SRO.SecOrDep) /\ xs \subset fdom RO.Or.mp{1}].
 proof.
 proc.
 inline RO.Or.hash.
 seq 1 0 :
   (={elem} /\ G1.sec{1} = SRO.SecOrDep.secret{2} /\
-   ={mp}(RO.Or, SRO.SecOrDep) /\ xs = dom RO.Or.mp{1} /\
+   ={mp}(RO.Or, SRO.SecOrDep) /\ xs = fdom RO.Or.mp{1} /\
    inp{1} = (elem{2}, SRO.SecOrDep.secret{2})); first auto.
 wp; if => //; auto; progress.
 rewrite subsetP => el mem_dom_mp_el.
-rewrite domP in_fsetU in_fset1; by left.
+smt(mem_fdom mem_set).
 qed.
 
 local lemma LRO_LOr_RO_Or_SecOrToOr_SRO_SecOrDep_hash :
@@ -704,32 +706,37 @@ local lemma LRO_LOr_RO_Or_SecOrToOr_SRO_SecOrDep_hash :
    ={inp} /\
    G1.sec{1} = SRO.SecOrDep.secret{2} /\
    ={mp}(RO.Or, SRO.SecOrDep) /\ ={inps, ctr}(LRO.LOr, SRO.SecOrDep) /\
-   LRO.LOr.inps{1} \subset dom RO.Or.mp{1} ==>
+   LRO.LOr.inps{1} \subset fdom RO.Or.mp{1} ==>
    ={res} /\
    ={mp}(RO.Or, SRO.SecOrDep) /\ ={inps, ctr}(LRO.LOr, SRO.SecOrDep) /\
-   LRO.LOr.inps{1} \subset dom RO.Or.mp{1}].
+   LRO.LOr.inps{1} \subset fdom RO.Or.mp{1}].
 proof.
 proc; inline SRO.SecOrDep.lhash.
 seq 0 1 :
   (={inp} /\ inp0{2} = inp{2} /\ G1.sec{1} = SRO.SecOrDep.secret{2} /\
    ={mp}(RO.Or, SRO.SecOrDep) /\ ={inps, ctr}(LRO.LOr, SRO.SecOrDep) /\
-   LRO.LOr.inps{1} \subset dom RO.Or.mp{1}); first auto.
+   LRO.LOr.inps{1} \subset fdom RO.Or.mp{1}); first auto.
 if => //.
 inline RO.Or.hash; rcondf {1} 2.
-auto; progress; smt().
+auto; progress; smt(mem_fdom).
 auto.
 if => //.
 inline RO.Or.hash; sp 3 2.
-case (mem (dom RO.Or.mp{1}) inp0{1}).
+case (dom RO.Or.mp{1} inp0{1}).
 rcondf {1} 1; first auto.
 rcondt {2} 1; first auto.
 auto; progress;
-  rewrite subsetP => el; rewrite in_fsetU in_fset1; smt().
+  rewrite subsetP => el; rewrite in_fsetU in_fset1; smt(mem_fdom).
 rcondt {1} 1; first auto.
 rcondf {2} 1; first auto.
-wp; rnd; skip; progress;
-  [by rewrite getP_eq |
-   rewrite subsetP => el; rewrite domP 2!in_fsetU in_fset1; smt()].
+wp; rnd; skip => /> &2
+  ctr_R inps_R inps_R_sub_fdom_mp inp_not_in_inps_R _
+  inp_not_in_mp mp_L _.
+split.
+by rewrite get_set_sameE.
+rewrite subsetP => el;
+ rewrite mem_fdom mem_set in_fsetU in_fset1;
+  elim => [/inps_R_sub_fdom_mp /mem_fdom -> // | -> //].
 auto.
 qed.
 
@@ -745,16 +752,16 @@ seq 6 9 :
   (G1.tpv{1} = SecAdv.tpv{2} /\ G1.sec{1} = SRO.SecOrDep.secret{2} /\
    G1.qrys_ctr{1} = SecAdv.qrys_ctr{2} /\ ={mp}(RO.Or, SRO.SecOrDep) /\
    ={ctr, inps}(LRO.LOr, SRO.SecOrDep) /\
-   LRO.LOr.inps{1} \subset dom RO.Or.mp{1}).
+   LRO.LOr.inps{1} \subset fdom RO.Or.mp{1}).
 swap{1} 5 -4; auto; progress; rewrite sub0set.
 sim
   (: G1.sec{1} = SRO.SecOrDep.secret{2} /\
      ={mp}(RO.Or, SRO.SecOrDep) /\
      ={ctr, inps}(LRO.LOr, SRO.SecOrDep)) /
-  (LRO.LOr.inps{1} \subset dom RO.Or.mp{1}) :
+  (LRO.LOr.inps{1} \subset fdom RO.Or.mp{1}) :
   (={b}).
 exists* RO.Or.mp{1}; elim*; move => mp_L.
-conseq (G1_SRO_SecOrDep_hash_elem_hash (dom mp_L)); smt().
+conseq (G1_SRO_SecOrDep_hash_elem_hash (fdom mp_L)); smt().
 conseq (LRO_LOr_RO_Or_SecOrToOr_SRO_SecOrDep_hash); smt().
 qed.
 
@@ -848,30 +855,32 @@ local lemma SecOrToOr_SRO_SecOrIndep_LRO_LOr_RO_Or_hash :
    ={inp} /\
    SRO.SecOrIndep.lhmp{1} = RO.Or.mp{2} /\
    ={ctr, inps}(SRO.SecOrIndep, LRO.LOr) /\
-   LRO.LOr.inps{2} = dom RO.Or.mp{2} ==>
+   LRO.LOr.inps{2} = fdom RO.Or.mp{2} ==>
    ={res} /\
    SRO.SecOrIndep.lhmp{1} = RO.Or.mp{2} /\
    ={ctr, inps}(SRO.SecOrIndep, LRO.LOr) /\
-   LRO.LOr.inps{2} = dom RO.Or.mp{2}].
+   LRO.LOr.inps{2} = fdom RO.Or.mp{2}].
 proof.
 proc; inline SRO.SecOrIndep.lhash.
 seq 1 0 :
   (={inp} /\ inp0{1} = inp{1} /\
    SRO.SecOrIndep.lhmp{1} = RO.Or.mp{2} /\
    ={ctr, inps}(SRO.SecOrIndep, LRO.LOr) /\
-   LRO.LOr.inps{2} = dom RO.Or.mp{2}); first auto.
+   LRO.LOr.inps{2} = fdom RO.Or.mp{2}); first auto.
 if => //.
 inline RO.Or.hash.
 rcondf {2} 2.
 move => &m.
-auto; smt().
+auto; smt(mem_fdom).
 auto; smt().
 if => //.
 inline RO.Or.hash.
 rcondt {2} 4; first auto.
-auto; progress;
-  [by rewrite getP |
-   rewrite fsetP => el; by rewrite domP in_fsetU in_fset1].
+auto; progress; smt(mem_fdom).
+auto => /> &2 inp_not_in_mp _ outL _.
+split;
+  [by rewrite get_set_sameE oget_some |
+   by rewrite fdom_set].
 auto.
 qed.
 
@@ -886,13 +895,13 @@ seq 8 6 :
    SRO.SecOrIndep.lhmp{1} = RO.Or.mp{2} /\
    SRO.SecOrIndep.hmp{1} = Priv.Or.mp{2} /\
    ={inps, ctr}(SRO.SecOrIndep, LRO.LOr) /\
-   LRO.LOr.inps{2} = dom RO.Or.mp{2}).
-auto; progress; by rewrite dom0.
+   LRO.LOr.inps{2} = fdom RO.Or.mp{2}).
+auto; progress; smt(fdom0).
 sim
   (: SRO.SecOrIndep.lhmp{1} = RO.Or.mp{2} /\
      SRO.SecOrIndep.hmp{1} = Priv.Or.mp{2} /\
      ={inps, ctr}(SRO.SecOrIndep, LRO.LOr)) /
-  (LRO.LOr.inps{2} = dom RO.Or.mp{2}) :
+  (LRO.LOr.inps{2} = fdom RO.Or.mp{2}) :
   (={b}).
 conseq (SecOrToOr_SRO_SecOrIndep_LRO_LOr_RO_Or_hash); smt().
 qed.

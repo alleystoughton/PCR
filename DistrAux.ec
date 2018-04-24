@@ -2,6 +2,8 @@
 
 (* Auxiliary Lemmas on Distributions *)
 
+prover quorum=2 ["Alt-Ergo" "Z3"].  (* both Alt-Ergo and Z3 must succeed *)
+
 require import AllCore Distr DInterval Dexcepted Mu_mem List FSet.
 require import StdRing. import RField.
 require import StdOrder. import RealOrder.
