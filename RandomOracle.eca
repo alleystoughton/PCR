@@ -1339,10 +1339,6 @@ abstract theory RedundantHashing.
 (* Hashing Oracle *)
 
 module type HASHING = {
-  (* initialization *)
-
-  proc init() : unit
-
   (* ordinary hashing *)
 
   proc hash(inp : input) : output
@@ -1356,8 +1352,6 @@ module type HASHING = {
    random oracle O: redundant hashing calls O.hash *)
 
 module NonOptHashing(O : OR) : HASHING = {
-  proc init() : unit = {}
-
   proc hash = O.hash
 
   proc rhash(inp : input) : unit = {
@@ -1369,8 +1363,6 @@ module NonOptHashing(O : OR) : HASHING = {
    oracle: redundant hashing does nothing *)
 
 module OptHashing(O : OR) : HASHING = {
-  proc init() : unit = {}
-
   proc hash = O.hash
 
   proc rhash(inp : input) : unit = { }
