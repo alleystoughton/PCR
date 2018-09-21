@@ -48,8 +48,7 @@ move : nth_eq.
 rewrite -cat1s nth_cat /=.
 have -> /= : ! i < 1 by smt().
 move => nth_eq.
-rewrite -(IH (i - 1)) // ne0_i /=.
-have -> // : i + 1 - 1 = i - 1 + 1 by ring.
+by rewrite -(IH (i - 1)) // ne0_i.
 qed.
 
 lemma num_occs_upto_ge0 (x : 'a, ys : 'a list, i : int) :
@@ -176,9 +175,7 @@ lemma num_occs_cons (x y : 'a) (zs : 'a list) :
   (if x = y then 1 else 0) + num_occs x zs.
 proof.
 rewrite /num_occs.
-case (x = y) => -> /=;
-  (have -> /= : 1 + size zs <> 0 by smt(size_ge0));
-  by rewrite (addzC _ (-1)) addzA.
+case (x = y) => -> /=; have -> /= : 1 + size zs <> 0; by smt(size_ge0).
 qed.
 
 lemma num_occs_cat (x : 'a) (ys zs : 'a list) :
