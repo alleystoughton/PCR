@@ -548,7 +548,7 @@ proof.
 move => ll; proc.
 if => //; first auto.
 if => //.
-call (_ : true ==> true); first apply ll.
+call (_ : true ==> true).
 auto; progress; apply output_distr_ll.
 auto.
 qed.

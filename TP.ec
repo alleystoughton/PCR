@@ -600,7 +600,7 @@ proof.
 move => SOr hash_ll; proc.
 while (true) (size db - i).
 auto.
-call (_ : true); first apply hash_ll.
+call (_ : true).
 auto; smt().
 wp.
 call (_ : true ==> true); first apply Shuffle_shuffle_ll.

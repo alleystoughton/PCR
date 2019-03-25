@@ -815,7 +815,7 @@ proof.
 move => O server_bhash_ll; proc.
 while (true) (size db - i).
 move => z; wp.
-call (_ : true ==> true); first apply server_bhash_ll.
+call (_ : true ==> true).
 auto; smt().
 wp.
 call (_ : true ==> true); first apply Shuffle_shuffle_ll.
@@ -1161,7 +1161,9 @@ case (dom mp (elem', sec)) =>
 right; rewrite get_setE /#.
 left; rewrite mem_set /#.
 split.
-rewrite mem_set /#.
+by rewrite mem_set
+           (counting_in_ec_dom_impl_in_dom_or sec hdb mp
+            elems_cnts elem').
 rewrite get_setE.
 have -> /= : (elem', sec) <> (elem, sec') by smt().
 have elem_sec_in_mp : (elem', sec) \in mp
@@ -2027,7 +2029,7 @@ proof.
 move => O server_bhash_ll; proc.
 while (true) (size db - i).
 move => z; wp.
-call (_ : true ==> true); first apply server_bhash_ll.
+call (_ : true ==> true).
 auto; smt().
 wp.
 call (_ : true ==> true); first apply Shuffle_shuffle_ll.
