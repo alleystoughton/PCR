@@ -1573,7 +1573,7 @@ proc; auto; progress; apply output_distr_ll.
 auto.
 qed.
 
-local lemma NOH'_rehash_red_inps_preserves_map mp':
+local lemma NOH'_rehash_red_inps_empty_preserves_map mp':
   phoare
   [NOH'.rehash_red_inps :
    NOH'.mp = mp' /\ NOH'.red_inps = fset0 ==>
@@ -2040,7 +2040,7 @@ transitivity{1}
 progress; by exists OH'.mp{2} fset0.
 seq 0 1 : (={NOH'.mp, NOH'.red_inps}).
 exists* NOH'.mp{2}; elim* => mp'.
-call{2} (NOH'_rehash_red_inps_preserves_map mp'); auto.
+call{2} (NOH'_rehash_red_inps_empty_preserves_map mp'); auto.
 sim.
 transitivity{2}
  { b <@ GOH'.HA.main(); OH'.rehash_red_inps(); }
