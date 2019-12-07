@@ -879,7 +879,7 @@ rcondt {2} 4; first auto.
 auto; progress; smt(mem_fdom).
 auto => /> &2 inp_not_in_mp _ outL _.
 split;
-  [by rewrite get_set_sameE oget_some |
+  [by rewrite get_set_sameE |
    by rewrite fdom_set].
 auto.
 qed.

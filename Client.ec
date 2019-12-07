@@ -1099,7 +1099,7 @@ move => [_ [ctg2 ctg3]] lu_mp_elem_sec_tag.
 have in_dom_mp_elem_sec : dom mp (elem, sec)
   by rewrite domE lu_mp_elem_sec_tag.
 have oget_mp_elem_seq_tag : oget mp.[(elem, sec)] = tag
-  by rewrite lu_mp_elem_sec_tag oget_some.
+  by rewrite lu_mp_elem_sec_tag.
 smt().
 qed.
 
@@ -1134,7 +1134,7 @@ rewrite -mem_frng frng_set in_fsetU1 rem_id // mem_frng; smt().
 split => [elem' not_mem_dom_ec_elem' | elem' mem_dom_ec_elem'].
 case (elem' = elem) => [<<- | ne_elem'_elem].
 right.
-rewrite get_set_sameE oget_some num_occs_not_mem_imp0 /#.
+rewrite get_set_sameE num_occs_not_mem_imp0 /#.
 have [not_mem_dom_mp_elem'_sec | num_occs_get_mp_elem'_sec_hdb_eq0] :
   ! dom mp (elem', sec) \/
   num_occs (oget mp.[(elem', sec)]) hdb = 0 by smt().
@@ -1184,7 +1184,7 @@ rewrite /num_occs size_cat /= num_occs_upto_eq 1:size_cat /=.
 smt(size_ge0). by rewrite nth_cat /=.
 rewrite num_occs_upto_drop_last_part /incr_count.
 case (dom elems_cnts elem) => [mem_dom_ec_elem | not_mem_dom_ec_elem];
-  rewrite get_setE /= oget_some /#.
+  rewrite get_setE /= /#.
 qed.
 
 lemma counting_num_occs_add_hdb_ne_notin_ec
@@ -1686,7 +1686,7 @@ split; first smt().
 split; first by rewrite -serv_metric_mem_step.
 have -> :
   result_R = oget mp_R.[(nth elem_default db{2} i{2}, H2.sec{2})]
-  by rewrite mp_R_lu_eq oget_some.
+  by rewrite mp_R_lu_eq.
 apply counting_add_in_or => |>.
 smt().
 have :
@@ -1712,7 +1712,7 @@ split; first smt().
 split; first by rewrite -serv_metric_not_mem_step.
 have -> :
   result_R = oget mp_R.[(nth elem_default db{2} i{2}, H2.sec{2})]
-  by rewrite mp_R_lu_eq oget_some.
+  by rewrite mp_R_lu_eq.
 apply counting_add_in_or => |>.
 smt().
 have :
@@ -2957,7 +2957,7 @@ call (_ : ={glob RO.Or, glob CRO.COr}); first sim.
 wp.
 call (_ : ={glob RO.Or}); first sim.
 auto; progress; congr; congr; congr;
-  by rewrite oget_some some_oget.
+  by rewrite some_oget.
 rcondt{2} 3; first auto.
 auto.
 auto.

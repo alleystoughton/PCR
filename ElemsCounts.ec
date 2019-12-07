@@ -64,7 +64,7 @@ lemma ec_incr_oget_not_in_dom_eq (cnts : 'a counts) (elem : 'a) :
   ! elem \in cnts => oget (incr_count cnts elem).[elem] = 1.
 proof.
 move => elem_not_in_cnts; rewrite /incr_count.
-by rewrite elem_not_in_cnts /= get_set_sameE oget_some.
+by rewrite elem_not_in_cnts /= get_set_sameE.
 qed.
 
 lemma ec_incr_oget_in_dom_eq (cnts : 'a counts) (elem : 'a) :
@@ -72,7 +72,7 @@ lemma ec_incr_oget_in_dom_eq (cnts : 'a counts) (elem : 'a) :
   oget (incr_count cnts elem).[elem] = oget cnts.[elem] + 1.
 proof.
 rewrite /incr_count; move => -> /=.
-by rewrite get_setE /= oget_some.
+by rewrite get_setE.
 qed.
 
 lemma ec_incr_get_eq (cnts : 'a counts) (elem : 'a) :

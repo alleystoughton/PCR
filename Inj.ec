@@ -31,14 +31,13 @@ elim => [x2_in_mp | -> /=].
 case (x1 = x) => [ ->> // | ne_x1_x].
 case (x2 = x) => [ ->> // | ne_x2_x].
 by apply inj_mp.
-rewrite oget_some.
 case (x1 = x) => [// | ne_x1_x get_x1_y].
 have // : y \in ran.
   rewrite -rng_mp mem_frng rngE /=.
   exists x1; by rewrite (get_some mp x1).
 elim => //.
 case (x2 = x) => [<<- // | ne_x2_x x2_in_mp].
-rewrite oget_some eq_sym; move => get_x2_eq_y.
+rewrite eq_sym; move => get_x2_eq_y.
 have // : y \in ran.
   rewrite -rng_mp mem_frng rngE /=.
   exists x2; by rewrite (get_some mp x2).

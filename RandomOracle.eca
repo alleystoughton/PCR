@@ -877,7 +877,7 @@ rcondf{1} 1; first auto. rcondt{2} 1; first auto.
 auto; progress; move => inp; smt(in_fsetU in_fset1 mem_fdom).
 rcondt{1} 1; first auto. rcondf{2} 1; first auto.
 auto; progress;
-  [by rewrite get_set_sameE oget_some |
+  [by rewrite get_set_sameE |
    move => inp'; rewrite fdom_set 2!in_fsetU in_fset1; smt(subsetP) |
    move => inp'; rewrite fdom_set in_fsetU in_fset1; smt(subsetP)].
 inline*; wp; sp; if => //.
@@ -897,7 +897,7 @@ rcondf{1} 1; first auto. rcondt{2} 1; first auto.
 auto; progress; move => inp; smt(in_fsetU in_fset1 mem_fdom).
 rcondt{1} 1; first auto. rcondf{2} 1; first auto.
 auto; progress.
-by rewrite get_set_sameE oget_some.
+by rewrite get_set_sameE.
 move => inp'; rewrite fdom_set in_fsetU in_fset1; smt(subsetP).
 move => inp'; rewrite fdom_set 2!in_fsetU in_fset1; smt(subsetP).
 inline*; wp; sp; if => //.
@@ -911,7 +911,7 @@ rcondf{1} 1; first auto. rcondt{2} 1; first auto.
 auto; progress; by rewrite set_same.
 rcondt{1} 1; first auto. rcondf{2} 1; first auto.
 auto; progress;
-  [by rewrite get_set_sameE oget_some |
+  [by rewrite get_set_sameE |
    move => inp'; rewrite fdom_set in_fsetU in_fset1; smt(subsetP) |
    move => inp'; rewrite fdom_set in_fsetU in_fset1; smt(subsetP)].
 inline*; wp; sp; if => //.
@@ -1986,7 +1986,7 @@ progress; by exists OH'.mp{2} NOH'.red_inps{1} inp{2}.
 inline NOH'.rehash_red_inps_addl; sp; wp.
 rnd.
 call (_ : ={NOH'.mp, NOH'.red_inps}); first sim.
-skip; progress; by rewrite get_set_sameE oget_some.
+skip; progress; by rewrite get_set_sameE.
 transitivity{1}
   { result <@ NOH'.rehash_red_inps_rslt(inp); }
   (={inp, NOH'.mp} /\ ! mem NOH'.red_inps{1} inp{1} /\
