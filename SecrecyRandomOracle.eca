@@ -152,8 +152,10 @@ module SecOrDep : SEC_OR = {
   }
 
   proc hash(elem : elem) : output = {  (* uses secret *)
+    var out : output;
     if (! dom mp (elem, secret)) {
-      mp.[(elem, secret)] <$ output_distr;
+      out <$ output_distr;
+      mp.[(elem, secret)] <- out;
     }
     return oget mp.[(elem, secret)];
   }
@@ -201,8 +203,10 @@ module SecOrIndep : SEC_OR = {
   }
 
   proc hash(elem : elem) : output = {  (* uses hmp *)
+    var out : output;
     if (! dom hmp elem) {
-      hmp.[elem] <$ output_distr;
+      out <$ output_distr;
+      hmp.[elem] <- out;
     }
     return oget hmp.[elem];
   }
@@ -305,8 +309,10 @@ local module SecOrDepInstr : SEC_OR = {
   }
 
   proc hash(elem : elem) : output = {
+    var out : output;
     if (! dom mp (elem, secret)) {
-      mp.[(elem, secret)] <$ output_distr;
+      out <$ output_distr;
+      mp.[(elem, secret)] <- out;
     }
     return oget mp.[(elem, secret)];
   }
@@ -379,8 +385,10 @@ local module SecOrIndepInstr : SEC_OR = {
   }
 
   proc hash(elem : elem) : output = {
+    var out : output;
     if (! dom hmp elem) {
-      hmp.[elem] <$ output_distr;
+      out <$ output_distr;
+      hmp.[elem] <- out;
     }
     return oget hmp.[elem];
   }
@@ -485,8 +493,10 @@ local module ConvToSecOrIndepInstr(SGOr : SG.SG_OR) : SEC_OR = {
   }
 
   proc hash(elem : elem) : output = {
+    var out : output;
     if (! dom hmp elem) {
-      hmp.[elem] <$ output_distr;
+      out <$ output_distr;
+      hmp.[elem] <- out;
     }
     return oget hmp.[elem];
   }
