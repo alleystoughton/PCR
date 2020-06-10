@@ -72,7 +72,7 @@ auto => |> &2.
 split; first rewrite cats0 perm_eq_refl.
 move => xs ys not_lt_0_sz_xs _.
 have -> // : xs = []
-  by rewrite -size_eq0 IntExtra.eqn0Ngt 1:size_ge0.
+  by rewrite -size_eq0 eqn0Ngt 1:size_ge0.
 qed.
 
 lemma Shuffle_shuffle_perm_phoare (zs : t list) :
@@ -102,5 +102,5 @@ move => xs ys.
 split; first smt(size_ge0).
 move => not_gt0_sz_xs.
 have -> // : xs = []
-  by rewrite -size_eq0 IntExtra.eqn0Ngt 1:size_ge0.
+  by rewrite -size_eq0 eqn0Ngt 1:size_ge0.
 qed.

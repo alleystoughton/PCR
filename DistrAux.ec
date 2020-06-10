@@ -14,13 +14,13 @@ proof.
 move => lt_n_m.
 have gt0_m_minus_n : 0 < m - n by rewrite -(ltz_add2r n) -addzA addNz.
 have mn_eq : m - 1 + ((-n) + 1) = m - n by ring.
-rewrite dinterE -addzA /= -addzA /= max_ler mn_eq
+rewrite dinterE -addzA /= -addzA /= IntOrder.ler_maxr mn_eq
         1:ltzW 1:gt0_m_minus_n size_filter.
 have [ac _] := all_count (fun (i : int) => n <= i < m) (range n m).
 rewrite ac.
 rewrite allP => x mem_x_ran_nm /=; by rewrite -mem_range.
-by rewrite size_range max_ler 1:ltzW 1:gt0_m_minus_n -unitrE eq_fromint
-   IntOrder.lt0r_neq0.
+by rewrite size_range IntOrder.ler_maxr 1:ltzW 1:gt0_m_minus_n -unitrE
+   eq_fromint IntOrder.lt0r_neq0.
 qed.
 
 lemma dinter_in_supp_ge (i j x : int) :

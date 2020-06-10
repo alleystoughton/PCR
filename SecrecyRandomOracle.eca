@@ -178,10 +178,10 @@ module SecOrIndep : SEC_OR = {
   var ctr : int                         (* ctr = card inps *)
 
   proc init(sec : sec) : unit = {  (* secret is ignored *)
-    lhmp = empty;
-    hmp = empty;
-    inps = fset0;
-    ctr = 0;
+    lhmp <- empty;
+    hmp <- empty;
+    inps <- fset0;
+    ctr <- 0;
   }
 
   proc lhash(inp : elem * sec) : output = {  (* uses lhmp *)

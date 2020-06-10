@@ -505,7 +505,7 @@ local module SecOrToOr(SOr : SRO.SEC_OR) : RO.OR = {
 
   proc hash(inp : elem * sec) : tag = {
     var tag : tag;
-    tag = SOr.lhash(inp);  (* limited hashing *)
+    tag <@ SOr.lhash(inp);  (* limited hashing *)
     return tag;
   }
 }.
@@ -626,11 +626,11 @@ local lemma SecAdv_client_loop_ll :
 proof.
 move => SOr lhash_ll hash_ll; proc; sp.
 while (SecAdv.qrys_ctr <= qrys_max)
-      (IntExtra.b2i not_done * (qrys_max - SecAdv.qrys_ctr + 1)).
+      (b2i not_done * (qrys_max - SecAdv.qrys_ctr + 1)).
 auto.
 seq 1 :
   (SecAdv.qrys_ctr <= qrys_max /\ not_done /\
-   IntExtra.b2i not_done * (qrys_max - SecAdv.qrys_ctr + 1) = z).
+   b2i not_done * (qrys_max - SecAdv.qrys_ctr + 1) = z).
 auto.
 call (_ : true ==> true).
 apply (get_qry_ll (SecOrToOr(SOr))); proc; call lhash_ll; auto.

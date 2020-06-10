@@ -1207,7 +1207,8 @@ fel
    card BOrInstr.outs <=
    BOrInstr.adv_ctr + BOrInstr.serv_ctr + BOrInstr.clnt_ctr).
 rewrite -mulr_suml sumidE 1:budget_ge0 /coll_bound;
-  by rewrite powS 1:output_len_ge0 (fromintM 2) mul1r -mulrA -invfM.
+  by rewrite Ring.IntID.exprS 1:output_len_ge0
+             (fromintM 2) mul1r -mulrA -invfM.
 progress; by rewrite /budget IntOrder.ler_add 1:IntOrder.ler_add.
 inline*; auto; progress;
   [apply adv_budget_ge0 | apply serv_budget_ge0 | apply clnt_budget_ge0 |
@@ -1216,11 +1217,11 @@ proc.
 rcondf 1; first auto. rcondt 1; first auto.
 if.
 conseq (_ : ! BOrInstr.coll ==> _ : 0%r) => //.
-progress; by rewrite divr_ge0 le_fromint // ltzW powPos.
+progress; by rewrite divr_ge0 le_fromint // ltzW IntOrder.expr_gt0.
 hoare; auto.
 wp; rnd (mem BOrInstr.outs); skip; progress.
 by rewrite mu_output_distr_mem ler_wpmul2r 1:invr_ge0 le_fromint
-              1:ltzW 1:powPos.
+              1:ltzW 1:IntOrder.expr_gt0.
 smt().
 progress; proc.
 rcondf 1; first auto. rcondt 1; first auto.
@@ -1241,11 +1242,11 @@ proc.
 rcondt 1; first auto.
 if.
 conseq (_ : ! BOrInstr.coll ==> _ : 0%r) => //.
-progress; by rewrite divr_ge0 le_fromint // ltzW powPos.
+progress; by rewrite divr_ge0 le_fromint // ltzW IntOrder.expr_gt0.
 hoare; auto.
 wp; rnd (mem BOrInstr.outs); skip; progress.
 by rewrite mu_output_distr_mem ler_wpmul2r 1:invr_ge0 le_fromint
-              1:ltzW 1:powPos.
+              1:ltzW 1:IntOrder.expr_gt0.
 smt().
 progress; proc.
 rcondt 1; first auto.
@@ -1263,11 +1264,11 @@ proc.
 rcondf 1; first auto. rcondt 1; first auto.
 if.
 conseq (_ : ! BOrInstr.coll ==> _ : 0%r) => //.
-progress; by rewrite divr_ge0 le_fromint // ltzW powPos.
+progress; by rewrite divr_ge0 le_fromint // ltzW IntOrder.expr_gt0.
 hoare; auto.
 wp; rnd (mem BOrInstr.outs); skip; progress.
 by rewrite mu_output_distr_mem ler_wpmul2r 1:invr_ge0 le_fromint
-              1:ltzW 1:powPos.
+              1:ltzW 1:IntOrder.expr_gt0.
 smt().
 progress; proc.
 rcondf 1; first auto. rcondt 1; first auto.

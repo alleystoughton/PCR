@@ -846,11 +846,11 @@ move =>
   client_bhash_ll hash_ll.
 proc; sp.
 while (H1'.qrys_ctr <= qrys_max)
-      (IntExtra.b2i not_done * (qrys_max - H1'.qrys_ctr + 1)).
+      (b2i not_done * (qrys_max - H1'.qrys_ctr + 1)).
 auto.
 seq 1 :
   (H1'.qrys_ctr <= qrys_max /\ not_done /\
-   IntExtra.b2i not_done * (qrys_max - H1'.qrys_ctr + 1) = z).
+   b2i not_done * (qrys_max - H1'.qrys_ctr + 1) = z).
 auto.
 call (_ : true ==> true).
 apply (get_qry_ll (BOrToCOr(O))); proc; call adv_bhash_ll; auto.
@@ -859,7 +859,7 @@ if.
 auto; smt().
 seq 1 :
   (H1'.qrys_ctr <= qrys_max /\ not_done /\
-   IntExtra.b2i not_done * (qrys_max - H1'.qrys_ctr + 1) = z).
+   b2i not_done * (qrys_max - H1'.qrys_ctr + 1) = z).
 call (_ : true); first auto.
 call adv_within_budget_ll; auto.
 if.
@@ -2055,11 +2055,11 @@ move =>
   client_bhash_ll hash_ll.
 proc; sp.
 while (H2'.qrys_ctr <= qrys_max)
-      (IntExtra.b2i not_done * (qrys_max - H2'.qrys_ctr + 1)).
+      (b2i not_done * (qrys_max - H2'.qrys_ctr + 1)).
 auto.
 seq 1 :
   (H2'.qrys_ctr <= qrys_max /\ not_done /\
-   IntExtra.b2i not_done * (qrys_max - H2'.qrys_ctr + 1) = z).
+   b2i not_done * (qrys_max - H2'.qrys_ctr + 1) = z).
 auto.
 call (_ : true ==> true).
 apply (get_qry_ll (BOrToCOr(O))); proc; call adv_bhash_ll; auto.
@@ -2068,7 +2068,7 @@ if.
 auto; smt().
 seq 1 :
   (H2'.qrys_ctr <= qrys_max /\ not_done /\
-   IntExtra.b2i not_done * (qrys_max - H2'.qrys_ctr + 1) = z).
+   b2i not_done * (qrys_max - H2'.qrys_ctr + 1) = z).
 call (_ : true); first auto.
 call adv_within_budget_ll; auto.
 if.
@@ -2843,7 +2843,7 @@ split.
 move => i_add1_lt_sz_db; smt(size_drop).
 rewrite -drop_drop // => drop_i_add1_db_ne_nil.
 have sz_drop_i_add1_db := (size_drop (1 + i{1}) db{1} _); first smt().
-rewrite max_ler 1:/# in sz_drop_i_add1_db.
+rewrite IntOrder.ler_maxr 1:/# in sz_drop_i_add1_db.
 smt(size_eq0).
 auto => |> &2. split.
 split; [apply size_ge0 | by rewrite drop0].
@@ -2875,7 +2875,7 @@ by rewrite -drop_drop // addzC.
 split.
 rewrite -drop_drop // => drop_i_add1_db_ne_nil.
 have sz_drop_i_add1_db := (size_drop (1 + i{1}) db{1} _); first smt().
-rewrite max_ler 1:/# in sz_drop_i_add1_db.
+rewrite IntOrder.ler_maxr 1:/# in sz_drop_i_add1_db.
 smt(size_eq0).
 move => i_add1_lt_sz_db; smt(size_drop).
 auto => |> &2. split.
@@ -3001,7 +3001,7 @@ rewrite -(G7_GIdeal &m).
 have -> :
   (budget * (budget - 1))%r / (2 ^ tag_len)%r =
   2%r * BRO.coll_bound
-  by rewrite /BRO.coll_bound powS 1:tag_len_ge0 2!fromintM invfM
+  by rewrite /BRO.coll_bound Ring.IntID.exprS 1:tag_len_ge0 2!fromintM invfM
              2!mulrA (mulrC (2%r * (budget%r * (budget - 1)%r)) (inv 2%r))
              mulrA (mulrC (inv 2%r)) divrr.
 apply (GReal_G7 &m).
