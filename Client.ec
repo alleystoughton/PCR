@@ -2999,11 +2999,10 @@ lemma GReal_GIdeal' &m :
 proof.
 rewrite -(G7_GIdeal &m).
 have -> :
-  (budget * (budget - 1))%r / (2 ^ tag_len)%r =
-  2%r * BRO.coll_bound
-  by rewrite /BRO.coll_bound Ring.IntID.exprS 1:tag_len_ge0 2!fromintM invfM
-             2!mulrA (mulrC (2%r * (budget%r * (budget - 1)%r)) (inv 2%r))
-             mulrA (mulrC (inv 2%r)) divrr.
+  (budget * (budget - 1))%r / (2 ^ tag_len)%r = 2%r * BRO.coll_bound
+    by rewrite /BRO.coll_bound Ring.IntID.exprS 1:tag_len_ge0
+               (fromintM 2) invfM mulrA (mulrC 2%r) -mulrA
+               (mulrA 2%r) divrr.
 apply (GReal_G7 &m).
 qed.
 
