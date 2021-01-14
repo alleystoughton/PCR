@@ -840,7 +840,7 @@ local lemma GDepInstr_GIndepInstr &m :
      Pr[GIndepInstr.main() @ &m : res] | <=
   limit%r / (2 ^ sec_len)%r.
 proof.
-cut FundLem :
+have FundLem :
   `| Pr[GDepInstr.main() @ &m : res] -
      Pr[GIndepInstr.main() @ &m : res] | <=
    Pr[GIndepInstr.main() @ &m : SecOrIndepInstr.guessed].

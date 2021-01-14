@@ -68,7 +68,7 @@ by rewrite /trim catA perm_catCl -(catA (take i xs{2}))
            (catA [nth dflt xs{2} i]) perm_catCAl !catA
            cats1 -(take_nth dflt) 1:dinter_in_supp_le_lt //
            cat_take_drop.
-auto => |> &2.
+auto => |>.
 split; first rewrite cats0 perm_eq_refl.
 move => xs ys not_lt_0_sz_xs _.
 have -> // : xs = []
@@ -96,7 +96,7 @@ split => [| _].
 by rewrite (dinter_in_supp_ge 0 (size xs{hr} - 1) i).
 have /# : i <= size xs{hr} - 1
   by rewrite (dinter_in_supp_le 0 (size xs{hr} - 1) i).
-auto => |> &hr.
+auto => |>.
 split; first rewrite cats0 perm_eq_refl.
 move => xs ys.
 split; first smt(size_ge0).

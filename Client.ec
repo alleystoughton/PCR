@@ -1217,8 +1217,7 @@ lemma counting_num_occs_add_hdb_ne_in_ec
   num_occs (oget mp.[(elem', sec)]) (hdb ++ [oget mp.[(elem, sec)]]) =
   oget elems_cnts.[elem'].
 proof.
-move => inj [_ [_ cntg3]] ne_elem'_elem mem_dom_mp_elem_sec
-        mem_dom_ec_elem'.
+move => inj cntg ne_elem'_elem mem_dom_mp_elem_sec mem_dom_ec_elem'.
 have mem_dom_mp_elem'_sec : dom mp (elem', sec)
   by apply (counting_in_ec_dom_impl_in_dom_or sec hdb mp elems_cnts elem').
 split => //.
@@ -1673,7 +1672,7 @@ call
   (BOrInj_server_bhash_counting_mem_inps
    sec' elem' hdb' elems_cnts' serv_inps').
 auto =>
- |> &1 &2 ge0_i _ adv_ctr_le_adv_bud serv_inps_sub_dom_mp
+ |> &2 ge0_i _ adv_ctr_le_adv_bud serv_inps_sub_dom_mp
   serv_metric_invar not_serv_over inje cntg card_outs_ub i_lt_sz_db
   mem_serv_inps_elem_sec.
 split => [| _]; first smt(fcard_ge0).
@@ -1684,25 +1683,27 @@ move =>
 split; first smt().
 split; first smt().
 split; first by rewrite -serv_metric_mem_step.
+
+
 have -> :
-  result_R = oget mp_R.[(nth elem_default db{2} i{2}, H2.sec{2})]
+  result_R = oget mp_R.[(nth elem_default db{2} i{2}, sec')]
   by rewrite mp_R_lu_eq.
 apply counting_add_in_or => |>.
 smt().
 have :
-  mp_R.[(nth elem_default db{2} i{2}, H2.sec{2})] <> None by smt().
+  mp_R.[(nth elem_default db{2} i{2}, sec')] <> None by smt().
 smt(domE).
 call 
   (BOrInj_server_bhash_counting_not_mem_inps
    sec' elem' hdb' elems_cnts' serv_inps').
 auto =>
- |> &1 &2 ge0_i _ adv_ctr_le_adv_bud serv_inps_sub_dom_mp
+ |> &2 ge0_i _ adv_ctr_le_adv_bud serv_inps_sub_dom_mp
   serv_metric_invar not_serv_over inje cntg card_outs_ub i_lt_sz_db
   mem_serv_inps_elem_sec.
 split => [| _].
 by rewrite
-   (serv_metric_not_mem_bound_imp_card_inps_strict_bound G3.sec{2} i{2}
-    BRO.BOrInj.serv_inps{2} db{2}).
+   (serv_metric_not_mem_bound_imp_card_inps_strict_bound sec' i{2}
+    serv_inps' db{2}).
 move =>
   result_R mp_R outs_R serv_over_R card_serv_new_inps_le_db_uniqs_max
   serv_new_inps_sub_dom_mp_r not_serv_over_R inje_R cntg_R card_outs_R_ub
@@ -1711,12 +1712,12 @@ split; first smt().
 split; first smt().
 split; first by rewrite -serv_metric_not_mem_step.
 have -> :
-  result_R = oget mp_R.[(nth elem_default db{2} i{2}, H2.sec{2})]
+  result_R = oget mp_R.[(nth elem_default db{2} i{2}, sec')]
   by rewrite mp_R_lu_eq.
 apply counting_add_in_or => |>.
 smt().
 have :
-  mp_R.[(nth elem_default db{2} i{2}, H2.sec{2})] <> None by smt().
+  mp_R.[(nth elem_default db{2} i{2}, sec')] <> None by smt().
 smt(domE).
 auto; progress [-delta].
 rewrite size_ge0.
