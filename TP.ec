@@ -132,7 +132,10 @@ module GReal(Adv : ADV) : GAME = {
   }
 }.
 
-(* module type for TP's Simulator *)
+(* module type for TP's Simulator
+
+   Simulator can't use RO.Or - because of module restriction in
+   top-level theorem *)
 
 module type SIM = {
   (* initialization *)
@@ -991,7 +994,7 @@ end section.
 (* main theorem *)
 
 lemma GReal_GIdeal :
-  exists (Sim <: SIM{GReal, GIdeal}),
+  exists (Sim <: SIM{GReal, GIdeal}),  (* can't use RO.Or *)
   forall (Adv <: ADV{GReal, GIdeal, Sim}) &m,
   (forall (O <: RO.OR{Adv}),
    islossless O.hash => islossless Adv(O).init_and_get_db) =>

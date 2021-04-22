@@ -81,7 +81,8 @@ module GReal(Adv : ADV) : GAME = {
 (* module type for Server's Simulator, parameterized by a random
    oracle
 
-   only the main procedure may do hashing *)
+   only the main procedure may do hashing (Simulator can't directly
+   use RO.Or, because of module restriction in top-level theorem) *)
 
 module type SIM(O : RO.OR) = {
   (* initialization *)

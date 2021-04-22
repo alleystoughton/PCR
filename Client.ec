@@ -173,7 +173,9 @@ module type SIG = {
    parameterized by random oracle and Simulator's interface to Ideal
    Game, SIG
 
-   only client_loop may call procedures of SIG *)
+   only client_loop may call procedures of SIG or O (Simulator can't
+   directly use RO.Or because of module restriction in top-level
+   theorem) *)
 
 module type SIM(O : RO.OR, SIG : SIG) = {
   (* initialization *)
