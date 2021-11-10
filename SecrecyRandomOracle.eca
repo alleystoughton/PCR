@@ -255,11 +255,11 @@ module GIndep(SecAdv : SEC_ADV) = {
 
 section.
 
-declare module SecAdv : SEC_ADV{SecOrDep, SecOrIndep}.
+declare module SecAdv <: SEC_ADV{SecOrDep, SecOrIndep}.
 
 (* assume losslessness of SecAdv *)
 
-axiom SecAdv_ll :
+declare axiom SecAdv_ll :
   forall (SOr <: SEC_OR{SecAdv}),
   islossless SOr.lhash => islossless SOr.hash =>
   islossless SecAdv(SOr).main.

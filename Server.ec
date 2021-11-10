@@ -188,7 +188,7 @@ section.
 (* declare Adversary module -- subsequent games will reference it, instead
    of being parameterized by it *)
 
-declare module Adv : ADV{GReal, GIdeal, Sim}.
+declare module Adv <: ADV{GReal, GIdeal, Sim}.
 
 (* G1 is the result of doing inlining and dead code elimination to
    GReal(Adv) *)

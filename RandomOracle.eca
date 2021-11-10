@@ -600,9 +600,9 @@ module GSwitching(SWAdv : SWADV, O : BOR) = {
 
 section.
 
-declare module SWAdv : SWADV{BOr, BOrInj}.
+declare module SWAdv <: SWADV{BOr, BOrInj}.
 
-axiom SWAdv_ll :
+declare axiom SWAdv_ll :
   forall (O <: BOR{SWAdv}),
   islossless O.adv_bhash => islossless O.adv_within_budget =>
   islossless O.server_bhash =>islossless O.client_bhash =>
@@ -1421,7 +1421,7 @@ section.
    adversary has already returned its boolean result (and so oracle
    map equality is no longer of interest) *)
 
-declare module HashAdv : HASHING_ADV{Or}.
+declare module HashAdv <: HASHING_ADV{Or}.
 
 (* extended hashing module interface
 

@@ -271,24 +271,24 @@ require SecrecyRandomOracle.  (* abstract theory *)
 
 section.
 
-declare module Adv : ADV{GReal, GIdeal, Sim}.
+declare module Adv <: ADV{GReal, GIdeal, Sim}.
 
 (* these axioms will be preconditions of the lemma we export
    from section *)
 
-axiom init_and_get_db_ll :
+declare axiom init_and_get_db_ll :
   forall (O <: RO.OR{Adv}),
   islossless O.hash => islossless Adv(O).init_and_get_db.
 
-axiom get_qry_ll :
+declare axiom get_qry_ll :
   forall (O <: RO.OR{Adv}),
   islossless O.hash => islossless Adv(O).get_qry.
 
-axiom qry_done_ll :
+declare axiom qry_done_ll :
   forall (O <: RO.OR{Adv}),
   islossless O.hash => islossless Adv(O).qry_done.
 
-axiom final_ll :
+declare axiom final_ll :
   forall (O <: RO.OR{Adv}),
   islossless O.hash => islossless Adv(O).final.
 
