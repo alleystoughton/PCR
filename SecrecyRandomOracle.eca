@@ -218,7 +218,7 @@ module SecOrIndep : SEC_OR = {
    adversary has access to lhash and hash, but not init *)
 
 module type SEC_ADV(SOr : SEC_OR) = {
-  proc * main() : bool {SOr.lhash SOr.hash}
+  proc * main() : bool {SOr.lhash, SOr.hash}
 }.
 
 (* dependent game -- uses dependent oracle *)
@@ -255,12 +255,12 @@ module GIndep(SecAdv : SEC_ADV) = {
 
 section.
 
-declare module SecAdv <: SEC_ADV{SecOrDep, SecOrIndep}.
+declare module SecAdv <: SEC_ADV{-SecOrDep, -SecOrIndep}.
 
 (* assume losslessness of SecAdv *)
 
 declare axiom SecAdv_ll :
-  forall (SOr <: SEC_OR{SecAdv}),
+  forall (SOr <: SEC_OR{-SecAdv}),
   islossless SOr.lhash => islossless SOr.hash =>
   islossless SecAdv(SOr).main.
 
@@ -551,7 +551,7 @@ local module (SGAdv : SG.SG_ADV) (SGOr : SG.SG_OR) = {
 
 (* work up to showing that concrete secret guessing adversary is lossless *)
 
-local lemma ConvToSecOrIndepInstr_Lossless_lhash (SGOr <: SG.SG_OR{SGAdv}) :
+local lemma ConvToSecOrIndepInstr_Lossless_lhash (SGOr <: SG.SG_OR{-SGAdv}) :
   islossless SGOr.guess =>
   islossless ConvToSecOrIndepInstr(SGOr).lhash.
 proof.
@@ -563,7 +563,7 @@ auto; progress; apply output_distr_ll.
 auto.
 qed.
 
-local lemma ConvToSecOrIndepInstr_Lossless_hash (SGOr <: SG.SG_OR{SGAdv}) :
+local lemma ConvToSecOrIndepInstr_Lossless_hash (SGOr <: SG.SG_OR{-SGAdv}) :
   islossless SGOr.guess =>
   islossless ConvToSecOrIndepInstr(SGOr).hash.
 proof.
@@ -572,7 +572,7 @@ if => //.
 auto; progress; apply output_distr_ll.
 qed.
 
-local lemma SGAdv_Lossless_main (SGOr <: SG.SG_OR{SGAdv}) :
+local lemma SGAdv_Lossless_main (SGOr <: SG.SG_OR{-SGAdv}) :
   islossless SGOr.guess =>
   islossless SGAdv(SGOr).main.
 proof.
@@ -866,8 +866,8 @@ qed.
 
 end section.
 
-lemma GDep_GIndep (SecAdv <: SEC_ADV{SecOrDep, SecOrIndep}) &m :
-  (forall (SOr <: SEC_OR{SecAdv}),
+lemma GDep_GIndep (SecAdv <: SEC_ADV{-SecOrDep, -SecOrIndep}) &m :
+  (forall (SOr <: SEC_OR{-SecAdv}),
    islossless SOr.lhash => islossless SOr.hash =>
    islossless SecAdv(SOr).main) =>
   `|Pr[GDep(SecAdv).main() @ &m : res] -

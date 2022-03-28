@@ -271,25 +271,25 @@ require SecrecyRandomOracle.  (* abstract theory *)
 
 section.
 
-declare module Adv <: ADV{GReal, GIdeal, Sim}.
+declare module Adv <: ADV{-GReal, -GIdeal, -Sim}.
 
 (* these axioms will be preconditions of the lemma we export
    from section *)
 
 declare axiom init_and_get_db_ll :
-  forall (O <: RO.OR{Adv}),
+  forall (O <: RO.OR{-Adv}),
   islossless O.hash => islossless Adv(O).init_and_get_db.
 
 declare axiom get_qry_ll :
-  forall (O <: RO.OR{Adv}),
+  forall (O <: RO.OR{-Adv}),
   islossless O.hash => islossless Adv(O).get_qry.
 
 declare axiom qry_done_ll :
-  forall (O <: RO.OR{Adv}),
+  forall (O <: RO.OR{-Adv}),
   islossless O.hash => islossless Adv(O).qry_done.
 
 declare axiom final_ll :
-  forall (O <: RO.OR{Adv}),
+  forall (O <: RO.OR{-Adv}),
   islossless O.hash => islossless Adv(O).final.
 
 (* G1 is like GReal(Adv), except that inlining and dead code
@@ -621,7 +621,7 @@ auto; smt().
 qed.
 
 local lemma SecAdv_client_loop_ll :
-  forall (SOr <: SRO.SEC_OR{SecAdv}),
+  forall (SOr <: SRO.SEC_OR{-SecAdv}),
   islossless SOr.lhash => islossless SOr.hash =>
   phoare
   [SecAdv(SOr).client_loop :
@@ -655,7 +655,7 @@ auto; smt().
 qed.
 
 local lemma SecAdv_main_ll :
-  forall (SOr <: SRO.SEC_OR{SecAdv}),
+  forall (SOr <: SRO.SEC_OR{-SecAdv}),
   islossless SOr.lhash => islossless SOr.hash =>
   islossless SecAdv(SOr).main.
 proof.
@@ -994,15 +994,15 @@ end section.
 (* main theorem *)
 
 lemma GReal_GIdeal :
-  exists (Sim <: SIM{GReal, GIdeal}),  (* can't use RO.Or *)
-  forall (Adv <: ADV{GReal, GIdeal, Sim}) &m,
-  (forall (O <: RO.OR{Adv}),
+  exists (Sim <: SIM{-GReal, -GIdeal}),  (* can't use RO.Or *)
+  forall (Adv <: ADV{-GReal, -GIdeal, -Sim}) &m,
+  (forall (O <: RO.OR{-Adv}),
    islossless O.hash => islossless Adv(O).init_and_get_db) =>
-  (forall (O <: RO.OR{Adv}),
+  (forall (O <: RO.OR{-Adv}),
    islossless O.hash => islossless Adv(O).get_qry) =>
-  (forall (O <: RO.OR{Adv}),
+  (forall (O <: RO.OR{-Adv}),
    islossless O.hash => islossless Adv(O).qry_done) =>
-  (forall (O <: RO.OR{Adv}),
+  (forall (O <: RO.OR{-Adv}),
    islossless O.hash => islossless Adv(O).final) =>
   `|Pr[GReal(Adv).main() @ &m : res] -
     Pr[GIdeal(Adv, Sim).main() @ &m : res]| <=

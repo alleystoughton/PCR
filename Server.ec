@@ -188,7 +188,7 @@ section.
 (* declare Adversary module -- subsequent games will reference it, instead
    of being parameterized by it *)
 
-declare module Adv <: ADV{GReal, GIdeal, Sim}.
+declare module Adv <: ADV{-GReal, -GIdeal, -Sim}.
 
 (* G1 is the result of doing inlining and dead code elimination to
    GReal(Adv) *)
@@ -631,8 +631,8 @@ end section.
 (* main theorem *)
 
 lemma GReal_GIdeal :
-  exists (Sim <: SIM{GReal, GIdeal}),
-  forall (Adv <: ADV{GReal, GIdeal, Sim}) &m,
+  exists (Sim <: SIM{-GReal, -GIdeal}),
+  forall (Adv <: ADV{-GReal, -GIdeal, -Sim}) &m,
   Pr[GReal(Adv).main() @ &m : res] = Pr[GIdeal(Adv, Sim).main() @ &m : res].
 proof.
 exists Sim => Adv &m.

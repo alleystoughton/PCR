@@ -578,8 +578,8 @@ module BOrInj : BOR = {
 
 module type SWADV(O : BOR) = {
   proc * main() : bool
-    {O.adv_bhash O.adv_within_budget O.server_bhash
-     O.client_bhash O.hash}
+    {O.adv_bhash, O.adv_within_budget, O.server_bhash,
+     O.client_bhash, O.hash}
 }.
 
 (* switching game, parameterized by switching adversary and
@@ -600,10 +600,10 @@ module GSwitching(SWAdv : SWADV, O : BOR) = {
 
 section.
 
-declare module SWAdv <: SWADV{BOr, BOrInj}.
+declare module SWAdv <: SWADV{-BOr, -BOrInj}.
 
 declare axiom SWAdv_ll :
-  forall (O <: BOR{SWAdv}),
+  forall (O <: BOR{-SWAdv}),
   islossless O.adv_bhash => islossless O.adv_within_budget =>
   islossless O.server_bhash =>islossless O.client_bhash =>
   islossless O.hash =>
@@ -1321,8 +1321,8 @@ qed.
 
 end section.
 
-lemma Switching (SWAdv <: SWADV{BOr, BOrInj}) &m :
-  (forall (O <: BOR{SWAdv}),
+lemma Switching (SWAdv <: SWADV{-BOr, -BOrInj}) &m :
+  (forall (O <: BOR{-SWAdv}),
    islossless O.adv_bhash => islossless O.adv_within_budget =>
    islossless O.server_bhash => islossless O.client_bhash =>
    islossless O.hash =>
@@ -1382,7 +1382,7 @@ module OptHashing(O : OR) : HASHING = {
 (* Hashing Adversary *)
 
 module type HASHING_ADV(H : HASHING) = {
-  proc * main() : bool {H.hash H.rhash}
+  proc * main() : bool {H.hash, H.rhash}
 }.
 
 (* games based on the two implementations of hashing *)
@@ -1421,7 +1421,7 @@ section.
    adversary has already returned its boolean result (and so oracle
    map equality is no longer of interest) *)
 
-declare module HashAdv <: HASHING_ADV{Or}.
+declare module HashAdv <: HASHING_ADV{-Or}.
 
 (* extended hashing module interface
 
@@ -2079,7 +2079,7 @@ qed.
 
 end section.
 
-lemma GNonOptHashing_GOptHashing (HashAdv <: HASHING_ADV{Or}) &m :
+lemma GNonOptHashing_GOptHashing (HashAdv <: HASHING_ADV{-Or}) &m :
     Pr[GNonOptHashing(HashAdv).main() @ &m : res] =
     Pr[GOptHashing(HashAdv).main() @ &m : res].
 proof. apply (GNonOptHashing_GOH' HashAdv &m). qed.
