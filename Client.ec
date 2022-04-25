@@ -480,7 +480,7 @@ local module H1(O : BRO.BOR) = {
 
   proc server_hash_db(db : db) : unit = {
     var i : int; var elem : elem; var tag : tag;
-    db <- Shuffle.shuffle(db);
+    db <@ Shuffle.shuffle(db);
     hdb <- []; i <- 0;
     while (i < size db) {
       elem <- nth elem_default db i;
@@ -735,7 +735,7 @@ local module (H1' : BRO.SWADV) (O : BRO.BOR) = {
     var i : int;
     var elem : elem;
     var tag : tag;
-    db <- Shuffle.shuffle(db);
+    db <@ Shuffle.shuffle(db);
     hdb <- []; i <- 0;
     while (i < size db) {
       elem <- nth elem_default db i;
@@ -1001,7 +1001,7 @@ local module H2(O : BRO.BOR) = {
 
   proc server_count_and_hash_db(db : db) : unit = {
     var i : int; var elem : elem; var tag : tag;
-    db <- Shuffle.shuffle(db);
+    db <@ Shuffle.shuffle(db);
     elems_cnts <- empty_ec; i <- 0;
     while (i < size db) {
       elem <- nth elem_default db i;
@@ -1960,7 +1960,7 @@ local module (H2' : BRO.SWADV) (O : BRO.BOR) = {
 
   proc server_count_and_hash_db(db : db) : unit = {
     var i : int; var elem : elem; var tag : tag;
-    db <- Shuffle.shuffle(db);
+    db <@ Shuffle.shuffle(db);
     elems_cnts <- empty_ec; i <- 0;
     while (i < size db) {
       elem <- nth elem_default db i;
@@ -2229,7 +2229,7 @@ local module G5 = {
 
   proc server_count_and_hash_db(db : db) : unit = {
     var i : int; var elem : elem;
-    db <- Shuffle.shuffle(db);
+    db <@ Shuffle.shuffle(db);
     elems_cnts <- empty_ec; i <- 0;
     while (i < size db) {
       elem <- nth elem_default db i;
@@ -2431,7 +2431,7 @@ local module G6 = {
 
   proc server_count_db(db : db) : unit = {
     var i : int; var elem : elem;
-    db <- Shuffle.shuffle(db);
+    db <@ Shuffle.shuffle(db);
     elems_cnts <- empty_ec; i <- 0;
     while (i < size db) {
       elem <- nth elem_default db i;
@@ -2515,7 +2515,7 @@ local module (HashingAdv : RH.HASHING_ADV) (Hashing : RH.HASHING) = {
 
   proc server_count_and_hash_db(db : db) : unit = {
     var i : int; var elem : elem;
-    db <- Shuffle.shuffle(db);
+    db <@ Shuffle.shuffle(db);
     elems_cnts <- empty_ec; i <- 0;
     while (i < size db) {
       elem <- nth elem_default db i;

@@ -206,7 +206,7 @@ local module G1 : GAME = {
     var elem : elem;
     var tag : tag;
     sv <- sv ++ [sv_got_db db];
-    db <- Shuffle.shuffle(db);
+    db <@ Shuffle.shuffle(db);
     sv <- sv ++ [sv_shuffle db];
     hdb <- []; i <- 0;
     while (i < size db) {
@@ -267,7 +267,7 @@ local module G2 : GAME = {
     var elem : elem;
     var tag : tag;
     sv <- sv ++ [sv_got_db db];
-    db <- Shuffle.shuffle(db);
+    db <@ Shuffle.shuffle(db);
     sv <- sv ++ [sv_shuffle db];
     hdb <- []; i <- 0;
     while (i < size db) {
@@ -417,7 +417,7 @@ local module (HashingAdv : RH.HASHING_ADV) (Hashing : RH.HASHING) = {
     var elem : elem;
     var tag : tag;
     sv <- sv ++ [sv_got_db db];
-    db <- Shuffle.shuffle(db);
+    db <@ Shuffle.shuffle(db);
     sv <- sv ++ [sv_shuffle db];
     hdb <- []; i <- 0;
     while (i < size db) {

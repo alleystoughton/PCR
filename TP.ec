@@ -317,7 +317,7 @@ local module G1 : GAME = {
     var i : int;
     var elem : elem;
     var tag : tag;
-    db <- Shuffle.shuffle(db);
+    db <@ Shuffle.shuffle(db);
     hdb <- []; i <- 0;
     while (i < size db) {
       elem <- nth elem_default db i;
@@ -533,7 +533,7 @@ local module (SecAdv : SRO.SEC_ADV) (SOr : SRO.SEC_OR) = {
     var i : int;
     var elem : elem;
     var tag : tag;
-    db <- Shuffle.shuffle(db);
+    db <@ Shuffle.shuffle(db);
     hdb <- []; i <- 0;
     while (i < size db) {
       elem <- nth elem_default db i;
@@ -788,7 +788,7 @@ local module G2 = {
     var i : int;
     var elem : elem;
     var tag : tag;
-    db <- Shuffle.shuffle(db);
+    db <@ Shuffle.shuffle(db);
     hdb <- []; i <- 0;
     while (i < size db) {
       elem <- nth elem_default db i;
