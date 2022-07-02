@@ -59,7 +59,7 @@ module type ADV(O : RO.OR) = {
   (* initialize Adversary, and try to get a database from it; None
      means refusal *)
 
-  proc * init_and_get_db(tpv : tp_view) : db option {O.hash}
+  proc init_and_get_db(tpv : tp_view) : db option {O.hash}
 
   (* try to get a query from Adversary; None means done supplying queries *)
 
@@ -140,7 +140,7 @@ module GReal(Adv : ADV) : GAME = {
 module type SIM = {
   (* initialization *)
 
-  proc * init() : unit
+  proc init() : unit
 
   (* get current view *)
 
@@ -432,7 +432,7 @@ auto.
 qed.
 
 local lemma GReal_G1_main :
-  equiv[GReal(Adv).main ~ G1.main : true ==> ={res}].
+  equiv[GReal(Adv).main ~ G1.main : ={glob Adv} ==> ={res}].
 proof.
 proc.
 inline Protocol(GReal(Adv).Env).main
@@ -445,7 +445,7 @@ inline Protocol(GReal(Adv).Env).main
        GReal(Adv).Env.init_and_get_db
        GReal(Adv).Env.final.
 seq 11 5 :
-  (={glob LRO.LOr(RO.Or)} /\ Protocol.server_sec{1} = G1.sec{2} /\
+  (={glob Adv, glob LRO.LOr(RO.Or)} /\ Protocol.server_sec{1} = G1.sec{2} /\
    GReal.Env.qrys_ctr{1} = G1.qrys_ctr{2} /\
    Protocol.client_sec{1} = G1.sec{2} /\ Protocol.tpv{1} = G1.tpv{2}).
 swap{2} 4 -2; inline*; auto.
@@ -746,13 +746,13 @@ qed.
 local lemma G1_GDep_SecAdv_main :
   equiv
   [G1.main ~ SRO.GDep(SecAdv).main :
-   true ==> ={res}].
+   ={glob Adv} ==> ={res}].
 proof.
 proc.
 inline LRO.LOr(RO.Or).init RO.Or.init
        SRO.GDep(SecAdv).SA.main SRO.SecOrDep.init.
 seq 6 9 :
-  (G1.tpv{1} = SecAdv.tpv{2} /\ G1.sec{1} = SRO.SecOrDep.secret{2} /\
+  (={glob Adv} /\ G1.tpv{1} = SecAdv.tpv{2} /\ G1.sec{1} = SRO.SecOrDep.secret{2} /\
    G1.qrys_ctr{1} = SecAdv.qrys_ctr{2} /\ ={mp}(RO.Or, SRO.SecOrDep) /\
    ={ctr, inps}(LRO.LOr, SRO.SecOrDep) /\
    LRO.LOr.inps{1} \subset fdom RO.Or.mp{1}).
@@ -888,13 +888,13 @@ auto.
 qed.
 
 local lemma GIndep_SecAdv_G2_main :
-  equiv[SRO.GIndep(SecAdv).main ~ G2.main : true ==> ={res}].
+  equiv[SRO.GIndep(SecAdv).main ~ G2.main : ={glob Adv} ==> ={res}].
 proof.
 proc.
 inline SRO.GIndep(SecAdv).SA.main SRO.SecOrIndep.init
        LRO.LOr(RO.Or).init RO.Or.init Priv.Or.init.
 seq 8 6 :
-  (SecAdv.tpv{1} = G2.tpv{2} /\ SecAdv.qrys_ctr{1} = G2.qrys_ctr{2} /\
+  (={glob Adv} /\ SecAdv.tpv{1} = G2.tpv{2} /\ SecAdv.qrys_ctr{1} = G2.qrys_ctr{2} /\
    SRO.SecOrIndep.lhmp{1} = RO.Or.mp{2} /\
    SRO.SecOrIndep.hmp{1} = Priv.Or.mp{2} /\
    ={inps, ctr}(SRO.SecOrIndep, LRO.LOr) /\
@@ -961,13 +961,13 @@ auto.
 qed.
 
 local lemma G2_GIdeal_main :
-  equiv[G2.main ~ GIdeal(Adv, Sim).main : true ==> ={res}].
+  equiv[G2.main ~ GIdeal(Adv, Sim).main : ={glob Adv} ==> ={res}].
 proof.
 proc.
 inline Sim.init Sim.get_view Sim.receive_hdb.
 swap{2} 2 4; swap{2} 2 3.
 seq 6 8 :
-  (={tpv}(G2, Sim) /\ ={qrys_ctr}(G2, GIdeal) /\
+  (={glob Adv} /\ ={tpv}(G2, Sim) /\ ={qrys_ctr}(G2, GIdeal) /\
    ={mp}(G2.Or, GIdeal.Or) /\ ={glob LRO.LOr} /\
    ={mp}(G2.POr, GIdeal.POr) /\ ={glob Adv, db_opt}); first sim.
 call (_ : ={mp}(G2.Or, GIdeal.Or) /\ ={glob LRO.LOr}); first sim.

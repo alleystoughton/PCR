@@ -19,7 +19,7 @@ module type ADV(O : RO.OR) = {
   (* initialize Adversary, and try to get a database from it; None
      means refusal *)
 
-  proc * init_and_get_db(sv : server_view) : db option {O.hash}
+  proc init_and_get_db(sv : server_view) : db option {O.hash}
 
   (* try to get a query from Adversary; None means done supplying queries *)
 
@@ -87,7 +87,7 @@ module GReal(Adv : ADV) : GAME = {
 module type SIM(O : RO.OR) = {
   (* initialization *)
 
-  proc * init() : unit { (* no use of O *) }
+  proc init() : unit { (* no use of O *) }
 
   (* get current view *)
 
@@ -352,7 +352,7 @@ auto.
 qed.
 
 local lemma GReal_G1_main :
-  equiv[GReal(Adv).main ~ G1.main : true ==> ={res}].
+  equiv[GReal(Adv).main ~ G1.main : ={glob Adv} ==> ={res}].
 proof.
 proc.
 inline Protocol(GReal(Adv).Env).main
@@ -365,7 +365,7 @@ inline Protocol(GReal(Adv).Env).main
        GReal(Adv).Env.init_and_get_db
        GReal(Adv).Env.final.
 seq 9 3 :
-  (={sv}(Protocol, G1) /\ Protocol.server_sec{1} = G1.sec{2} /\
+  (={glob Adv} /\ ={sv}(Protocol, G1) /\ Protocol.server_sec{1} = G1.sec{2} /\
    Protocol.client_sec{1} = G1.sec{2} /\ ={glob RO.Or}).
 swap{1} 5 -4; swap{2} 2 -1; swap{1} 5 -3.
 wp; simplify; sim.
@@ -492,14 +492,14 @@ qed.
 local lemma G1_GNonOptHashing_HashingAdv_main :
   equiv
   [G1.main ~ RH.GNonOptHashing(HashingAdv).main :
-   true ==> ={res}].
+   ={glob Adv} ==> ={res}].
 proof.
 proc; inline RH.GNonOptHashing(HashingAdv).HA.main.
 swap{2} 3 -1; swap{2} 3 1; wp.
-seq 3 4 : (={glob RO.Or} /\ ={sec, sv}(G1, HashingAdv)).
+seq 3 4 : (={glob Adv, glob RO.Or} /\ ={sec, sv}(G1, HashingAdv)).
 inline*; auto.
 seq 1 1 :
-  (={glob RO.Or, glob Adv, db_opt} /\ ={sec, sv}(G1, HashingAdv)); first sim.
+  (={glob Adv, glob RO.Or, glob Adv, db_opt} /\ ={sec, sv}(G1, HashingAdv)); first sim.
 if => //.
 call (_ : ={glob RO.Or}); first sim.
 call G1_HashingAdv_NonOptHashing_client_loop.
@@ -543,14 +543,14 @@ qed.
 local lemma GOptHashing_HashingAdv_G2_main :
   equiv
   [RH.GOptHashing(HashingAdv).main ~ G2.main :
-   true ==> ={res}].
+   ={glob Adv} ==> ={res}].
 proof.
 proc; inline RH.GOptHashing(HashingAdv).HA.main.
 swap{1} 3 -1; swap{1} 3 1; wp.
-seq 4 3 : (={glob RO.Or} /\ ={sec, sv}(HashingAdv, G2)).
+seq 4 3 : (={glob Adv, glob RO.Or} /\ ={sec, sv}(HashingAdv, G2)).
 inline*; auto.
 seq 1 1 :
-  (={glob RO.Or, glob Adv, db_opt} /\ ={sec, sv}(HashingAdv, G2)); first sim.
+  (={glob Adv, glob RO.Or, glob Adv, db_opt} /\ ={sec, sv}(HashingAdv, G2)); first sim.
 if => //.
 call (_ : ={glob RO.Or}); first sim.
 call HashingAdv_OptHashing_G2_client_loop.
@@ -592,13 +592,13 @@ proc; inline GIdeal(Adv, Sim).S.get_view; sim.
 qed.
 
 local lemma G2_GIdeal_main :
-  equiv[G2.main ~ GIdeal(Adv, Sim).main : true ==> ={res}].
+  equiv[G2.main ~ GIdeal(Adv, Sim).main : ={glob Adv} ==> ={res}].
 proof.
 proc.
 inline GIdeal(Adv, Sim).S.init GIdeal(Adv, Sim).S.get_view
        GIdeal(Adv, Sim).S.main.
 seq 3 5 :
-  (={glob RO.Or} /\ ={sv}(G2, Sim) /\ Sim.sv{2} = sv{2} /\
+  (={glob Adv, glob RO.Or} /\ ={sv}(G2, Sim) /\ Sim.sv{2} = sv{2} /\
    G2.sec{1} = Sim.sec{2}).
 swap{2} 4 -3; inline*; auto.
 seq 1 1 :

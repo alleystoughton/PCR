@@ -201,7 +201,7 @@ module type ENV = {
   (* initialize environment, and try to get a database from it; None
      means refusal *)
 
-  proc * init_and_get_db() : db option
+  proc init_and_get_db() : db option
 
   (* try get a query from the environment; None means done supplying queries *)
 

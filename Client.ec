@@ -65,7 +65,7 @@ module type ADV(O : CRO.COR) = {
   (* initialize Adversary, and try to get a database from it; None
      means refusal *)
 
-  proc * init_and_get_db(cv : client_view) : db option {O.chash}
+  proc init_and_get_db(cv : client_view) : db option {O.chash}
 
   (* try to get a query from Adversary; None means done supplying queries *)
 
@@ -180,7 +180,7 @@ module type SIG = {
 module type SIM(O : RO.OR, SIG : SIG) = {
   (* initialization *)
 
-  proc * init() : unit { (* no use of O, SIG *) }
+  proc init() : unit { (* no use of O, SIG *) }
 
   (* get current view *)
 
@@ -640,7 +640,7 @@ auto.
 qed.
 
 local lemma GReal_G1_main :
-  equiv[GReal(Adv).main ~ G1.main : true ==> ={res}].
+  equiv[GReal(Adv).main ~ G1.main : ={glob Adv} ==> ={res}].
 proof.
 proc.
 inline Protocol(GReal(Adv).Env).main
@@ -653,7 +653,8 @@ inline Protocol(GReal(Adv).Env).main
        GReal(Adv).Env.init_and_get_db
        GReal(Adv).Env.final.
 seq 11 4 :
-  (RO.Or.mp{1} = BRO.BOr.mp{2} /\
+  (={glob Adv} /\
+   RO.Or.mp{1} = BRO.BOr.mp{2} /\
    CRO.COr.inps{1} = BRO.BOr.adv_inps{2} /\
    CRO.COr.ctr{1} = BRO.BOr.adv_ctr{2} /\
    CRO.COr.over{1} = BRO.BOr.adv_over{2} /\
@@ -941,7 +942,7 @@ qed.
 local lemma G1_GSwitching_H1'_BOr_main &m :
   equiv
   [G1.main ~ BRO.GSwitching(H1', BRO.BOr).main :
-   true ==> ={res}].
+   ={glob Adv} ==> ={res}].
 proof.
 proc.
 inline BRO.GSwitching(H1', BRO.BOr).SA.main.
@@ -956,7 +957,7 @@ proof. by byequiv (G1_GSwitching_H1'_BOr_main &m). qed.
 local lemma GSwitching_H1'_BOrInj_G2_main &m :
   equiv
   [BRO.GSwitching(H1', BRO.BOrInj).main ~ G2.main:
-   true ==> ={res}].
+   ={glob Adv} ==> ={res}].
 proof.
 proc.
 inline BRO.GSwitching(H1', BRO.BOrInj).SA.main.
@@ -1872,11 +1873,11 @@ auto; progress; apply qrys_max_ge0.
 qed.
 
 local lemma G2_G3_main :
-  equiv[G2.main ~ G3.main : true ==> ={res}].
+  equiv[G2.main ~ G3.main : ={glob Adv} ==> ={res}].
 proof.
 proc.
 seq 4 4 :
-  (={glob BRO.BOrInj} /\ ={sec, cv, qrys_ctr}(G2, G3) /\
+  (={glob Adv, glob BRO.BOrInj} /\ ={sec, cv, qrys_ctr}(G2, G3) /\
    G2.qrys_ctr{1} = 0 /\
    BRO.BOrInj.mp{1} = empty /\ BRO.BOrInj.outs{1} = fset0 /\
    BRO.BOrInj.adv_ctr{1} = 0 /\ BRO.BOrInj.adv_inps{1} = fset0 /\
@@ -2149,7 +2150,7 @@ qed.
 local lemma G3_GSwitching_H2'_BOrInj_main &m :
   equiv
   [G3.main ~ BRO.GSwitching(H2', BRO.BOrInj).main :
-   true ==> ={res}].
+   ={glob Adv} ==> ={res}].
 proof.
 proc.
 inline BRO.GSwitching(H2', BRO.BOrInj).SA.main.
@@ -2164,7 +2165,7 @@ proof. by byequiv (G3_GSwitching_H2'_BOrInj_main &m). qed.
 local lemma GSwitching_H2'_BOr_G4_main &m :
   equiv
   [BRO.GSwitching(H2', BRO.BOr).main ~ G4.main:
-   true ==> ={res}].
+   ={glob Adv} ==> ={res}].
 proof.
 proc.
 inline BRO.GSwitching(H2', BRO.BOr).SA.main.
@@ -2373,11 +2374,11 @@ auto.
 qed.
 
 local lemma G4_G5_main :
-  equiv[G4.main ~ G5.main : true ==> ={res}].
+  equiv[G4.main ~ G5.main : ={glob Adv} ==> ={res}].
 proof.
 proc.
 seq 4 5 :
-  (={mp}(BRO.BOr, RO.Or) /\
+  (={glob Adv} /\ ={mp}(BRO.BOr, RO.Or) /\
    BRO.BOr.adv_inps{1} = CRO.COr.inps{2} /\
    BRO.BOr.adv_ctr{1} = CRO.COr.ctr{2} /\
    BRO.BOr.adv_over{1} = CRO.COr.over{2} /\
@@ -2612,12 +2613,12 @@ proof. sim. qed.
 local lemma G5_GNonOptHashing_HashingAdv_main :
   equiv
   [G5.main ~ RH.GNonOptHashing(HashingAdv).main :
-   true ==> ={res}].
+   ={glob Adv} ==> ={res}].
 proof.
 proc; inline RH.GNonOptHashing(HashingAdv).HA.main.
 swap{1} [4..5] -2; swap{2} 2 5; swap{2} 2 -1; swap{2} 5 -2.
 seq 5 5 :
-  (={glob RO.Or, glob CRO.COr} /\
+  (={glob Adv, glob RO.Or, glob CRO.COr} /\
    ={sec, cv, qrys_ctr}(G5, HashingAdv));
   first inline*; auto.
 seq 1 1 :
@@ -2663,12 +2664,12 @@ proof. sim. qed.
 local lemma GOptHashing_HashingAdv_G6_main :
   equiv
   [RH.GOptHashing(HashingAdv).main ~ G6.main :
-   true ==> ={res}].
+   ={glob Adv} ==> ={res}].
 proof.
 proc; inline RH.GOptHashing(HashingAdv).HA.main.
 swap{1} 2 5; swap{1} 2 -1; swap{1} 5 -2; swap{2} [4..5] -2.
 seq 5 5 :
-  (={glob RO.Or, glob CRO.COr} /\
+  (={glob Adv, glob RO.Or, glob CRO.COr} /\
    ={sec, cv, qrys_ctr}(HashingAdv, G6));
   first inline*; auto.
 seq 1 1 :
@@ -2887,7 +2888,7 @@ split; smt(size_ge0 size_eq0).
 qed.
 
 local lemma G6_G7_main :
-  equiv[G6.main ~ G7.main : true ==> ={res}].
+  equiv[G6.main ~ G7.main : ={glob Adv} ==> ={res}].
 proof.
 proc.
 seq 6 6 :
@@ -2967,7 +2968,7 @@ auto.
 qed.
 
 local lemma G7_GIdeal_main :
-  equiv[G7.main ~ GIdeal(Adv, Sim).main : true ==> ={res}].
+  equiv[G7.main ~ GIdeal(Adv, Sim).main : ={glob Adv} ==> ={res}].
 proof.        
 proc.
 inline GIdeal(Adv, Sim).S.init
@@ -2975,7 +2976,7 @@ inline GIdeal(Adv, Sim).S.init
        G7.COr.within_budget
        GIdeal(Adv, Sim).COr.within_budget.
 seq 5 5 :
-  (={glob RO.Or, glob CRO.COr} /\ ={sec, cv}(G7, Sim) /\
+  (={glob Adv, glob RO.Or, glob CRO.COr} /\ ={sec, cv}(G7, Sim) /\
    ={qrys_ctr}(G7, GIdeal)).
 swap{1} 3 -2; sim.
 seq 1 2 :

@@ -218,7 +218,7 @@ module SecOrIndep : SEC_OR = {
    adversary has access to lhash and hash, but not init *)
 
 module type SEC_ADV(SOr : SEC_OR) = {
-  proc * main() : bool {SOr.lhash, SOr.hash}
+  proc main() : bool {SOr.lhash, SOr.hash}
 }.
 
 (* dependent game -- uses dependent oracle *)
@@ -336,7 +336,7 @@ local module GDepInstr = {
 }.
 
 local lemma GDep_GDepInstr_main :
-  equiv[GDep(SecAdv).main ~ GDepInstr.main : true ==> ={res}].
+  equiv[GDep(SecAdv).main ~ GDepInstr.main : ={glob SecAdv} ==> ={res}].
 proof. sim. qed.
 
 local lemma GDep_GDepInstr &m :
@@ -413,10 +413,10 @@ local module GIndepInstr = {
 }.
 
 local lemma GIndepInstr_GIndep_main :
-  equiv[GIndepInstr.main ~ GIndep(SecAdv).main : true ==> ={res}].
+  equiv[GIndepInstr.main ~ GIndep(SecAdv).main : ={glob SecAdv} ==> ={res}].
 proof.
 proc.
-seq 2 1 : (={lhmp, hmp, ctr, inps}(SecOrIndepInstr, SecOrIndep)).
+seq 2 1 : (={glob SecAdv} /\ ={lhmp, hmp, ctr, inps}(SecOrIndepInstr, SecOrIndep)).
 inline *; auto; progress; apply sec_distr_ll.
 sim.
 qed.
@@ -593,12 +593,13 @@ qed.
 local lemma GIndepInstr_SGGuessing_SGAdv_main :
   equiv
   [GIndepInstr.main ~ SG.Guessing(SGAdv).main :
-   true ==> ={guessed}(SecOrIndepInstr, SG.SGOr)].
+   ={glob SecAdv} ==> ={guessed}(SecOrIndepInstr, SG.SGOr)].
 proof.
 proc.
 inline *; wp.
 seq 8 10 :
-  (={secret, guessed}(SecOrIndepInstr, SG.SGOr) /\
+  (={glob SecAdv} /\
+   ={secret, guessed}(SecOrIndepInstr, SG.SGOr) /\
    ={lhmp, hmp, ctr, inps}(SecOrIndepInstr, ConvToSecOrIndepInstr) /\
    SG.SGOr.ctr{2} = ConvToSecOrIndepInstr.ctr{2}).
 auto.
@@ -781,13 +782,13 @@ qed.
 local lemma GDepInstr_GIndepInstr_main :
   equiv
   [GDepInstr.main ~ GIndepInstr.main :
-   true ==>
+   ={glob SecAdv} ==>
    (SecOrDepInstr.guessed{1} <=> SecOrIndepInstr.guessed{2}) /\
    (! SecOrIndepInstr.guessed{2} => (res{1} <=> res{2}))].
 proof.
 proc.
 seq 2 2 :
-  (={sec} /\ ! SecOrDepInstr.guessed{1} /\
+  (={glob SecAdv, sec} /\ ! SecOrDepInstr.guessed{1} /\
    ={guessed, secret, ctr, inps}(SecOrDepInstr, SecOrIndepInstr) /\
    invar
    SecOrDepInstr.secret{1} SecOrDepInstr.mp{1} SecOrIndepInstr.lhmp{2}
@@ -795,7 +796,7 @@ seq 2 2 :
 inline *; auto; progress; smt(mem_empty emptyE in_fset0).
 call
   (_ :
-   ! SecOrDepInstr.guessed{1} /\
+   ! SecOrDepInstr.guessed{1} /\ ={glob SecAdv} /\
    ={guessed, secret, ctr, inps}(SecOrDepInstr, SecOrIndepInstr) /\
    invar
    SecOrDepInstr.secret{1} SecOrDepInstr.mp{1} SecOrIndepInstr.lhmp{2}
@@ -846,7 +847,7 @@ have FundLem :
    Pr[GIndepInstr.main() @ &m : SecOrIndepInstr.guessed].
   byequiv
     (_ :
-     true ==>
+     ={glob SecAdv} ==>
      (SecOrDepInstr.guessed{1} <=> SecOrIndepInstr.guessed{2}) /\
      (! SecOrIndepInstr.guessed{2} => (res{1} <=> res{2}))) :
     (SecOrDepInstr.guessed) => //.

@@ -577,7 +577,7 @@ module BOrInj : BOR = {
    procedures, *except* init *)
 
 module type SWADV(O : BOR) = {
-  proc * main() : bool
+  proc main() : bool
     {O.adv_bhash, O.adv_within_budget, O.server_bhash,
      O.client_bhash, O.hash}
 }.
@@ -864,7 +864,8 @@ proof.
 byequiv => //.
 proc.
 seq 1 1 :
-  (={mp, adv_inps, adv_ctr, adv_over, serv_inps, serv_ctr,
+  (={glob SWAdv} /\
+   ={mp, adv_inps, adv_ctr, adv_over, serv_inps, serv_ctr,
      serv_over, clnt_ctr, clnt_over}(BOr, BOrInstr) /\
    BOr.adv_inps{1} = fset0 /\ BOr.serv_inps{1} = fset0 /\
    BOr.mp{1} = empty); inline*; auto.
@@ -941,7 +942,8 @@ proof.
 byequiv => //.
 proc.
 seq 1 1 :
-  (={mp, outs, adv_inps, adv_ctr, adv_over, serv_inps, serv_ctr,
+  (={glob SWAdv} /\
+   ={mp, outs, adv_inps, adv_ctr, adv_over, serv_inps, serv_ctr,
      serv_over, clnt_ctr, clnt_over}(BOrInjInstr, BOrInj));
   first inline*; auto.
 sim.
@@ -952,13 +954,14 @@ qed.
 local lemma GSwitching_BOrInstr_BOrInjInstr_main :
   equiv
   [GSwitching(SWAdv, BOrInstr).main ~ GSwitching(SWAdv, BOrInjInstr).main :
-   true ==>
+   ={glob SWAdv} ==>
    (BOrInstr.coll{1} <=> BOrInjInstr.coll{2}) /\
    (! BOrInjInstr.coll{2} => (res{1} <=> res{2}))].
 proof.
 proc.
 seq 1 1 :
-  (={mp, outs, coll, adv_inps, adv_ctr, adv_over, serv_inps, serv_ctr,
+  (={glob SWAdv} /\
+   ={mp, outs, coll, adv_inps, adv_ctr, adv_over, serv_inps, serv_ctr,
      serv_over, clnt_ctr, clnt_over}(BOrInstr, BOrInjInstr) /\
    !BOrInstr.coll{1} /\ BOrInstr.outs{1} = fset0 /\
    BOrInstr.adv_ctr{1} = 0 /\ BOrInstr.serv_ctr{1} = 0 /\
@@ -966,6 +969,7 @@ seq 1 1 :
 inline*; auto.
 call
   (_ :
+   ={glob SWAdv} /\
    ={mp, outs, coll, adv_inps, adv_ctr, adv_over, serv_inps, serv_ctr,
      serv_over, clnt_ctr, clnt_over}(BOrInstr, BOrInjInstr) /\
    !BOrInstr.coll{1} /\ BOrInstr.outs{1} = fset0 /\
@@ -1382,7 +1386,7 @@ module OptHashing(O : OR) : HASHING = {
 (* Hashing Adversary *)
 
 module type HASHING_ADV(H : HASHING) = {
-  proc * main() : bool {H.hash, H.rhash}
+  proc main() : bool {H.hash, H.rhash}
 }.
 
 (* games based on the two implementations of hashing *)
@@ -1661,10 +1665,10 @@ qed.
 local lemma GNonOptHashing_GNOH'_main :
   equiv
   [GNonOptHashing(HashAdv).main ~ GNOH'.main :
-   true ==> ={res}].
+   ={glob HashAdv} ==> ={res}].
 proof.
 proc; inline Or.init NOH'.init.
-seq 1 2 : (={mp}(Or, NOH')).   
+seq 1 2 : (={glob HashAdv} /\ ={mp}(Or, NOH')).   
 auto.
 call (_ : ={mp}(Or, NOH')).
 apply NonOptHashing_Or_NOH'_hash.
@@ -1712,11 +1716,12 @@ qed.
 local lemma GOH'_GOptHashing_main :
   equiv
   [GOH'.main ~ GOptHashing(HashAdv).main :
-   true ==> ={res}].
+   ={glob HashAdv} ==> ={res}].
 proof.
 proc; inline OH'.init Or.init.
 seq 2 1 :
-  (={mp}(OH', Or) /\
+  (={glob HashAdv} /\
+   ={mp}(OH', Or) /\
    (forall (inp' : input),
     mem OH'.red_inps{1} inp' => ! dom OH'.mp{1} inp')).
 auto; smt(in_fset0).
@@ -2023,7 +2028,7 @@ local lemma eager_hashing_adv :
   eager
   [NOH'.rehash_red_inps(); , HashAdv(NOH').main ~
    HashAdv(OH').main, OH'.rehash_red_inps(); :
-   ={mp, red_inps}(NOH', OH') ==>
+   ={glob HashAdv} /\ ={mp, red_inps}(NOH', OH') ==>
    ={res} /\ ={mp, red_inps}(NOH', OH')].
 proof.
 eager proc
@@ -2044,23 +2049,23 @@ local lemma GNOH'_GOH' &m :
 proof.
 byequiv => //; proc.
 seq 1 1 :
-  (={mp, red_inps}(NOH', OH') /\ NOH'.red_inps{1} = fset0).
+  (={glob HashAdv} /\ ={mp, red_inps}(NOH', OH') /\ NOH'.red_inps{1} = fset0).
 inline*; auto.
 transitivity{1}
  { NOH'.rehash_red_inps(); b <@ GNOH'.HA.main(); }
- (={NOH'.mp, NOH'.red_inps} /\ NOH'.red_inps{1} = fset0 ==>
+ (={glob HashAdv, NOH'.mp, NOH'.red_inps} /\ NOH'.red_inps{1} = fset0 ==>
   ={b})
- (={mp, red_inps}(NOH', OH') ==> ={b}) => //.
-progress; by exists OH'.mp{2} fset0.
-seq 0 1 : (={NOH'.mp, NOH'.red_inps}).
+ (={glob HashAdv, mp, red_inps}(NOH', OH') ==> ={b}) => //.
+progress; by exists (glob HashAdv){2} OH'.mp{2} fset0.
+seq 0 1 : (={glob HashAdv} /\ ={NOH'.mp, NOH'.red_inps}).
 exists* NOH'.mp{2}; elim* => mp'.
 call{2} (NOH'_rehash_red_inps_empty_preserves_map mp'); auto.
 sim.
 transitivity{2}
  { b <@ GOH'.HA.main(); OH'.rehash_red_inps(); }
- (={mp, red_inps}(NOH', OH') ==> ={b})
- (={OH'.mp, OH'.red_inps} ==> ={b}) => //.
-progress; by exists OH'.mp{2} OH'.red_inps{2}.
+ (={glob HashAdv} /\ ={mp, red_inps}(NOH', OH') ==> ={b})
+ (={glob HashAdv, OH'.mp, OH'.red_inps} ==> ={b}) => //.
+progress; by exists (glob HashAdv){2} OH'.mp{2} OH'.red_inps{2}.
 eager call eager_hashing_adv; auto.
 call{1} OH'_rehash_red_inps_ll.
 sim.
