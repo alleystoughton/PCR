@@ -4,7 +4,7 @@
 
 prover quorum=2 ["Alt-Ergo" "Z3"].  (* both Alt-Ergo and Z3 must succeed *)
 
-require import AllCore FSet SmtMap MapAux.
+require import AllCore FSet FMap MapAux.
 
 (* counts for certain elements; counts are always >= 1 *)
 

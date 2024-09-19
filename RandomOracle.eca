@@ -28,7 +28,7 @@ prover quorum=2 ["Alt-Ergo" "Z3"].  (* both Alt-Ergo and Z3 must succeed *)
 
 (***************************** Standard Theories ******************************)
 
-require import AllCore Distr Mu_mem Dexcepted FSet SmtMap List
+require import AllCore Distr Mu_mem Dexcepted FSet FMap List
                FelTactic.
 require import StdBigop. import Bigreal BRA.
 require import StdOrder. import RealOrder.

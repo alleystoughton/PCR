@@ -4,7 +4,7 @@
 
 prover [""].  (* no SMT solvers *)
 
-require import AllCore SmtMap FSet MapAux.
+require import AllCore FMap FSet MapAux.
 
 pred inj (mp : ('a, 'b) fmap, ran : 'b fset) =
   frng mp = ran /\

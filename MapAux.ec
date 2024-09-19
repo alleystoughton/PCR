@@ -4,7 +4,7 @@
 
 prover [""].  (* no SMT solvers *)
 
-require import AllCore SmtMap FSet.
+require import AllCore FMap FSet.
 
 lemma get_none (mp : ('a, 'b) fmap, x : 'a) :
   x \notin mp => mp.[x] = None.

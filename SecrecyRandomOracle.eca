@@ -29,7 +29,7 @@ prover quorum=2 ["Alt-Ergo" "Z3"].  (* both Alt-Ergo and Z3 must succeed *)
 
 (***************************** Standard Theories ******************************)
 
-require import AllCore Distr FSet SmtMap.
+require import AllCore Distr FSet FMap.
 require import StdOrder. import RealOrder.
 
 (***************************** Auxiliary Theories *****************************)

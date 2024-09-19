@@ -11,7 +11,7 @@ prover [""].  (* no SMT solvers *)
 
 (***************************** Standard Theories ******************************)
 
-require export AllCore List Distr Mu_mem Dexcepted FSet SmtMap List
+require export AllCore List Distr Mu_mem Dexcepted FSet FMap List
                FelTactic.
 require export StdBigop. export Bigreal BRA.
 require export StdOrder.
