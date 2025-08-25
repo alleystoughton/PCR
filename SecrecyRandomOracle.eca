@@ -444,15 +444,10 @@ local clone SecretGuessing as SG with
   op sec_distr <- sec_distr,
   op limit <- limit
 proof *.
-(* beginning of realization *)
 realize sec_len_ge0. apply sec_len_ge0. qed.
-
 realize mu1_sec_distr. apply mu1_sec_distr. qed.
-
 realize sec_distr_ll. apply sec_distr_ll. qed.
-
 realize limit_ge0. apply limit_ge0. qed.
-(* end of realization *)
 
 (* module converting a secret guessing oracle to a secrecy random
    oracle approximating SecOrIndepInstr

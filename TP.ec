@@ -19,13 +19,9 @@ clone RandomOracle as Priv with
   op output_default <- zeros_tag,
   op output_distr <- tag_distr
 proof *.
-(* beginning of realization *)
 realize output_len_ge0. apply tag_len_ge0. qed.
-
 realize mu1_output_distr. apply mu1_tag_distr. qed.
-
 realize output_distr_ll. apply tag_distr_ll. qed.
-(* end of realization *)
 
 (********************************* Adversary **********************************)
 
@@ -40,9 +36,7 @@ axiom limit_ge0 : 0 <= limit.
 clone RO.Limited as LRO with
   op limit <- limit
 proof *.
-(* beginning of realization *)
 realize limit_ge0. apply limit_ge0. qed.
-(* end of realization *)
 
 (* maximum number of queries that may be made by Adversary *)
 
@@ -483,21 +477,13 @@ local clone SecrecyRandomOracle as SRO with
   op sec_distr <- sec_distr,
   op limit <- limit
 proof *.
-(* beginning of realization *)
 realize output_len_ge0. apply tag_len_ge0. qed.
-
 realize mu1_output_distr. apply mu1_tag_distr. qed.
-
 realize output_distr_ll. apply tag_distr_ll. qed.
-
 realize sec_len_ge0. apply sec_len_ge0. qed.
-
 realize mu1_sec_distr. apply mu1_sec_distr. qed.
-
 realize sec_distr_ll. apply sec_distr_ll. qed.
-
 realize limit_ge0. apply limit_ge0. qed.
-(* end of realization *)
 
 (* convert a secrecy random oracle to a random oracle (to be given to
    adversary, which lacks access to init) *)

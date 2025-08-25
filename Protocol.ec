@@ -49,12 +49,11 @@ clone Word as Sec with
   op Alphabet.card <- 2,              (* size of word alphabet *)
   op n <- sec_len,                    (* word length *)
   op dchar <- false                   (* default alphabet element *)
-proof
-  Alphabet.enum_spec by case,
-  ge0_n by apply sec_len_ge0
-  (* the remaining axioms are unprovable specifications *)
+proof *
 rename [op] "mkword" as "bits2w"   (* bool list -> Word.word *)
        [op] "ofword" as "w2bits".  (* Word.word -> bool list *)
+realize Alphabet.enum_spec. by case. qed.
+realize ge0_n. by apply sec_len_ge0. qed.
 
 type sec = Sec.word.  (* type of secrets *)
 
@@ -85,12 +84,11 @@ clone Word as Tag with
   op Alphabet.card <- 2,
   op n <- tag_len,
   op dchar <- false
-proof
-  Alphabet.enum_spec by case,
-  ge0_n by apply tag_len_ge0
-  (* the remaining axioms are unprovable specifications *)
+proof *
 rename [op] "mkword" as "bits2w"
        [op] "ofword" as "w2bits".
+realize Alphabet.enum_spec. by case. qed.
+realize ge0_n. by apply tag_len_ge0. qed.
 
 type tag = Tag.word.  (* type of tags *)
 
@@ -144,13 +142,9 @@ clone RandomOracle as RO with
   op output_default <- zeros_tag,
   op output_distr <- tag_distr
 proof *.
-(* beginning of realization *)
 realize output_len_ge0. apply tag_len_ge0. qed.
-
 realize mu1_output_distr. apply mu1_tag_distr. qed.
-
 realize output_distr_ll. apply tag_distr_ll. qed.
-(* end of realization *)
 
 (*********************** Databases and Hashed Databases ***********************)
 
