@@ -58,7 +58,7 @@ proof. rewrite /get_count; by move => ->. qed.
 
 lemma ec_get_empty (elem : 'a) :
   get_count empty_counts elem = 0.
-proof. by rewrite /get_count /empty_count mem_empty. qed.
+proof. by rewrite /get_count mem_empty. qed.
 
 lemma ec_incr_oget_not_in_dom_eq (cnts : 'a counts) (elem : 'a) :
   ! elem \in cnts => oget (incr_count cnts elem).[elem] = 1.
