@@ -1845,9 +1845,10 @@ while {1}
    cnt0{1} = num_occs_upto tag0{1} G2.hdb{1} i{1})
   (size G2.hdb{1} - i{1}).
 auto; smt(size_ge0 num_occs_upto_eq nth_in_range num_occs_upto_ne).
-auto; progress;
-  [smt(size_ge0) | smt(num_occs_upto0) | smt() |
-   smt(counting_num_occs_get_count)].
+auto; progress.
+smt(size_ge0). smt(num_occs_upto0). smt().
+rewrite (_ : i_L = size H1.hdb{1}) 1:/#.
+smt(counting_num_occs_get_count).
 call
   (_ :
    ={glob BRO.BOrInj} /\
